@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">不忘</string>
+    <string name="app_logo_name">不忘</string>
+
+    <!-- Strings related to login -->
+    <string name="prompt_account">名字</string>
+    <string name="prompt_password">密码</string>
+    <string name="prompt_password_confirm">确认密码</string>
+    <string name="prompt_email">邮箱</string>
+    <string name="prompt_answer">回答</string>
+
+    <string name="button_login">登陆</string>
+    <string name="button_register">第一次</string>
+    <string name="button_check_answer">确认挚友</string>
+    <string name="button_activate">加入</string>
+
+    <string name="error_network">网络有点问题哦</string>
+    <string name="error_exception">出现异常!</string>
+    <string name="error_field_required">必填哦</string>
+    <string name="error_api_return_failed">请求失败!</string>
+    <string name="error_invalid_email">邮箱格式不正确!</string>
+    <string name="error_invalid_name">名字太短了</string>
+    <string name="error_invalid_password">密码长度不够，至少6位</string>
+    <string name="error_inconsistent_password">两次输入密码不一致</string>
+    <string name="error_login_fail">抱歉，密码不正确!</string>
+
+    <string name="info_send_memory">时光匆匆，不忘与你</string>
+    <string name="info_activate_account">Ta们可能和你有一段不忘的回忆，请找到熟悉的Ta并确认:</string>
+    <string name="info_choose_account">请选择你“自己”:</string>
+</resources>
