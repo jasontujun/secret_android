@@ -6,6 +6,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -25,12 +26,18 @@ public class ChooseAccountFragment extends Fragment {
 
     public static final String KEY_ACCOUNTS = "accounts";
     public static final String KEY_GIFTS = "gifts";
-    public static final String KEY_SEED = "isSeed";
+    public static final String KEY_TYPE = "type";
+    public static final String KEY_CHOOSE_USER = "chooseUser";
+
+    public static final int TYPE_ACTIVE_ACCOUNT_LIST = 1;
+    public static final int TYPE_SEED_ACCOUNT_LIST = 2;
+    public static final int TYPE_GIFT_LIST = 3;
 
     private FragmentInteractListener mListener;
+    private User chooseUser;
     private List<User> accountList;
     private List<MemoryGift> giftList;
-    private boolean isSeed;// 是否是种子用户选择列表
+    private int type;// 列表界面类型
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -38,15 +45,20 @@ public class ChooseAccountFragment extends Fragment {
 
         if (getArguments() != null) {
             mListener = (FragmentInteractListener) getArguments().getSerializable(FragmentInteractListener.KEY);
-            isSeed = getArguments().getBoolean(KEY_SEED);
-            if (isSeed) {
-                giftList = (List<MemoryGift>) getArguments().getSerializable(KEY_GIFTS);
-                if (giftList == null)
-                    giftList = new ArrayList<MemoryGift>();
-            } else {
-                accountList = (List<User>) getArguments().getSerializable(KEY_ACCOUNTS);
-                if (accountList == null)
-                    accountList = new ArrayList<User>();
+            type = getArguments().getInt(KEY_TYPE);
+            switch (type) {
+                case TYPE_ACTIVE_ACCOUNT_LIST:
+                case TYPE_SEED_ACCOUNT_LIST:
+                    accountList = (List<User>) getArguments().getSerializable(KEY_ACCOUNTS);
+                    if (accountList == null)
+                        accountList = new ArrayList<User>();
+                    break;
+                case TYPE_GIFT_LIST:
+                    giftList = (List<MemoryGift>) getArguments().getSerializable(KEY_GIFTS);
+                    if (giftList == null)
+                        giftList = new ArrayList<MemoryGift>();
+                    chooseUser = (User) getArguments().getSerializable(KEY_CHOOSE_USER);
+                    break;
             }
         }
     }
@@ -54,15 +66,55 @@ public class ChooseAccountFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_account_list, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_choose_account, container, false);
+        View accountLayout = rootView.findViewById(R.id.account_info_layout);
         TextView mAccountListPromptView = (TextView) rootView.findViewById(R.id.account_list_prompt_txt);
         RecyclerView mAccountListView = (RecyclerView) rootView.findViewById(R.id.account_list);
-        if (isSeed) {
-            mAccountListView.setAdapter(new GiftAdapter(giftList));
-            mAccountListPromptView.setText(R.string.info_activate_account);
-        } else {
-            mAccountListView.setAdapter(new UserAdapter(accountList));
-            mAccountListPromptView.setText(R.string.info_choose_account);
+        TextView accountNameView = (TextView) rootView.findViewById(R.id.account_name_txt);
+        TextView accountDesView = (TextView) rootView.findViewById(R.id.account_des_txt);
+        Button backButton = (Button) rootView.findViewById(R.id.back_btn);
+        switch (type) {
+            case TYPE_ACTIVE_ACCOUNT_LIST:
+            case TYPE_SEED_ACCOUNT_LIST:
+                accountLayout.setVisibility(View.GONE);
+                if (accountList.size() == 0) {
+                    mAccountListPromptView.setText(R.string.info_account_none);
+                    backButton.setVisibility(View.VISIBLE);
+                    backButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            if (mListener != null)
+                                mListener.onBack();
+                        }
+                    });
+                    break;
+                }
+                mAccountListView.setAdapter(new UserAdapter(accountList));
+                mAccountListPromptView.setText(R.string.info_choose_account);
+                break;
+            case TYPE_GIFT_LIST:
+                if (chooseUser != null) {
+                    accountLayout.setVisibility(View.VISIBLE);
+                    accountNameView.setText(chooseUser.name);
+                    accountDesView.setVisibility(View.GONE);
+                } else {
+                    accountLayout.setVisibility(View.GONE);
+                }
+                if (giftList.size() == 0) {
+                    mAccountListPromptView.setText(R.string.info_account_none);
+                    backButton.setVisibility(View.VISIBLE);
+                    backButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            if (mListener != null)
+                                mListener.onBack();
+                        }
+                    });
+                    break;
+                }
+                mAccountListView.setAdapter(new GiftAdapter(giftList));
+                mAccountListPromptView.setText(R.string.info_activate_account);
+                break;
         }
         return rootView;
     }
@@ -88,7 +140,6 @@ public class ChooseAccountFragment extends Fragment {
             holder.mHeadView.setImageResource(R.drawable.headicon_active);
             holder.mNameView.setText(holder.mItem.name);
             holder.mDescriptionView.setText(XStringUtil.list2String(holder.mItem.descriptions, ", "));
-            holder.mQuestionView.setVisibility(View.GONE);
 
             holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -110,7 +161,6 @@ public class ChooseAccountFragment extends Fragment {
             public final ImageView mHeadView;
             public final TextView mNameView;
             public final TextView mDescriptionView;
-            public final TextView mQuestionView;
             public User mItem;
 
             public ViewHolder(View view) {
@@ -119,7 +169,6 @@ public class ChooseAccountFragment extends Fragment {
                 mHeadView = (ImageView) view.findViewById(R.id.account_head_img);
                 mNameView = (TextView) view.findViewById(R.id.account_name_txt);
                 mDescriptionView = (TextView) view.findViewById(R.id.account_des_txt);
-                mQuestionView = (TextView) view.findViewById(R.id.account_question_txt);
             }
         }
     }
@@ -143,9 +192,11 @@ public class ChooseAccountFragment extends Fragment {
         public void onBindViewHolder(final ViewHolder holder, int position) {
             holder.mItem = mValues.get(position);
             holder.mHeadView.setImageResource(R.drawable.headicon_seed);
-            holder.mNameView.setText(holder.mItem.receiverName);
-            holder.mDescriptionView.setText(XStringUtil.list2String(holder.mItem.receiverDescription, ", "));
-            holder.mQuestionView.setVisibility(View.VISIBLE);
+            holder.mNameView.setText(holder.mItem.senderName);
+            holder.mDescriptionView.setVisibility(View.GONE);
+            holder.mAboutLayout.setVisibility(View.VISIBLE);
+            holder.mAboutView.setText(XStringUtil.list2String(holder.mItem.receiverDescription, ", "));
+            holder.mQuestionLayout.setVisibility(View.VISIBLE);
             holder.mQuestionView.setText(holder.mItem.question);
 
             holder.mView.setOnClickListener(new View.OnClickListener() {
@@ -168,6 +219,9 @@ public class ChooseAccountFragment extends Fragment {
             public final ImageView mHeadView;
             public final TextView mNameView;
             public final TextView mDescriptionView;
+            public final View mAboutLayout;
+            public final TextView mAboutView;
+            public final View mQuestionLayout;
             public final TextView mQuestionView;
             public MemoryGift mItem;
 
@@ -177,6 +231,9 @@ public class ChooseAccountFragment extends Fragment {
                 mHeadView = (ImageView) view.findViewById(R.id.account_head_img);
                 mNameView = (TextView) view.findViewById(R.id.account_name_txt);
                 mDescriptionView = (TextView) view.findViewById(R.id.account_des_txt);
+                mAboutLayout = view.findViewById(R.id.account_about_layout);
+                mAboutView = (TextView) view.findViewById(R.id.account_about_txt);
+                mQuestionLayout = view.findViewById(R.id.account_question_layout);
                 mQuestionView = (TextView) view.findViewById(R.id.account_question_txt);
             }
         }

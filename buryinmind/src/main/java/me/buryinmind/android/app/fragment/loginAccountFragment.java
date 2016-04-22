@@ -1,12 +1,14 @@
 package me.buryinmind.android.app.fragment;
 
 import android.app.Fragment;
+import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -108,15 +110,21 @@ public class LoginAccountFragment extends Fragment {
         if (XStringUtil.isEmpty(password)) {
             mPasswordInputView.setError(getString(R.string.error_field_required));
             mPasswordInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         if (password.length() < GlobalSource.PASSWORD_MIN_SIZE) {
             mPasswordInputView.setError(getString(R.string.error_invalid_password));
             mPasswordInputView.requestFocus();
+            mWaiting = false;
             return;
         }
+        ((InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
+                .hideSoftInputFromWindow(mPasswordInputView.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+        mPasswordInputView.clearFocus();
         if (XStringUtil.isEmpty(userId)) {
             Toast.makeText(getActivity(), R.string.error_exception, Toast.LENGTH_SHORT).show();
+            mWaiting = false;
             return;
         }
         if (mListener != null) {

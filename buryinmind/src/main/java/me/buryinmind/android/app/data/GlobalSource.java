@@ -32,16 +32,20 @@ public class GlobalSource implements XDataSource {
     public static final int NAME_MIN_SIZE = 2;// 密码最少位数
     public static final int PASSWORD_MIN_SIZE = 6;// 密码最少位数
     public static final long DEFAULT_TOKEN_DURATION = 24 * 60 * 60 *1000;// token默认的有效期:1天
+    public static final int PRESS_BACK_INTERVAL = 1500; // back按键间隔，单位：毫秒
 
     SharedPreferences pref;
     private String name;
     private List<String> userNameRecords;
     private User user;
-    private String lastUserId;// 持久化到数据库的属性
-    private String lastUserName;// 持久化到数据库的属性
-    private List<String> lastUserDescriptions;// 持久化到数据库的属性
-    private long lastTokenTime;// 持久化到数据库的属性
-    private String userToken;// 持久化到数据库的属性
+    private long lastBackTime;// 上一次back键的时间
+
+    // ============== 持久化到数据库的属性 ============== //
+    private String lastUserId;
+    private String lastUserName;
+    private List<String> lastUserDescriptions;
+    private long lastTokenTime;
+    private String userToken;
 
     public GlobalSource(Context context, String name) {
         this.name = name;
@@ -128,6 +132,14 @@ public class GlobalSource implements XDataSource {
             editor.putString(KEY_USER_RECORD, JsonUtil.List2JsonString(userNameRecords));
         }
         editor.apply();
+    }
+
+    public void setLastBackTime(long lastBackTime) {
+        this.lastBackTime = lastBackTime;
+    }
+
+    public long getLastBackTime() {
+        return lastBackTime;
     }
 
     @Override

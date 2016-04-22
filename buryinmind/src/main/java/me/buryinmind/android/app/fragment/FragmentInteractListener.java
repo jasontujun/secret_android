@@ -11,5 +11,7 @@ public interface FragmentInteractListener extends Serializable {
 
     void onLoading();
 
+    void onBack();
+
     void onFinish(boolean result, Object data);
 }

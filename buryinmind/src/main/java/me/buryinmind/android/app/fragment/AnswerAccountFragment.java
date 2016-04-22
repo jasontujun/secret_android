@@ -1,12 +1,14 @@
 package me.buryinmind.android.app.fragment;
 
 import android.app.Fragment;
+import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -36,6 +38,7 @@ public class AnswerAccountFragment extends Fragment {
     private FragmentInteractListener mListener;
     private MemoryGift mGift;
 
+    private TextView mQuestionView;
     private EditText mAnswerInputView;
     private boolean mWaiting;
 
@@ -59,6 +62,7 @@ public class AnswerAccountFragment extends Fragment {
         ImageView accountHeadView = (ImageView) rootView.findViewById(R.id.account_head_img);
         TextView accountNameView = (TextView) rootView.findViewById(R.id.account_name_txt);
         TextView accountDesView = (TextView) rootView.findViewById(R.id.account_des_txt);
+        mQuestionView = (TextView) rootView.findViewById(R.id.account_question_txt);
         mAnswerInputView = (EditText) rootView.findViewById(R.id.answer_input);
         Button checkAnswerBtn = (Button) rootView.findViewById(R.id.check_answer_btn);
 
@@ -66,6 +70,7 @@ public class AnswerAccountFragment extends Fragment {
             friendNameView.setText(mGift.senderName);
             accountNameView.setText(mGift.receiverName);
             accountDesView.setText(XStringUtil.list2String(mGift.receiverDescription, " ,"));
+            mQuestionView.setText(mGift.question);
         }
         // 设置键盘Enter键动作响应
         mAnswerInputView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -97,10 +102,15 @@ public class AnswerAccountFragment extends Fragment {
         if (XStringUtil.isEmpty(answer)) {
             mAnswerInputView.setError(getString(R.string.error_field_required));
             mAnswerInputView.requestFocus();
+            mWaiting = false;
             return;
         }
+        ((InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
+                .hideSoftInputFromWindow(mAnswerInputView.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+        mAnswerInputView.clearFocus();
         if (mGift == null) {
             Toast.makeText(getActivity(), R.string.error_exception, Toast.LENGTH_SHORT).show();
+            mWaiting = false;
             return;
         }
         if (mListener != null) {

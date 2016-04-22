@@ -15,17 +15,24 @@ public abstract class ApiUtil {
 
     public static XHttpRequest searchSeedUser(String name, List<String> des) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/search")
+                .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
                 .addStringParam("name", name)
-                .addStringParam("description", JsonUtil.List2JsonString(des));
+                .addStringParam("des", JsonUtil.List2JsonString(des));
     };
 
     public static XHttpRequest searchActiveUser(String name, List<String> des) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/search")
+                .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
                 .addStringParam("name", name)
-                .addStringParam("description", JsonUtil.List2JsonString(des));
+                .addStringParam("des", JsonUtil.List2JsonString(des));
     };
+
+    public static XHttpRequest getSeedUserDetail(String uid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/detail")
+                .addStringParam("uid", uid);
+    }
 
     public static XHttpRequest answerActivateQuestion(String uid, String bid, String answer) {
         String salt = "" + System.currentTimeMillis();

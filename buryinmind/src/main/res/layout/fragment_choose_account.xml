@@ -7,6 +7,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Account Info -->
+    <include
+        android:id="@+id/account_info_layout"
+        layout="@layout/part_account_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_gravity="center_horizontal"/>
 
     <!-- Activate Prompt -->
     <TextView
@@ -20,6 +28,16 @@
         android:textColor="@color/black"
         tools:text="@string/info_choose_account"/>
 
+    <Button
+        android:id="@+id/back_btn"
+        style="?android:textAppearanceSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/button_back"
+        android:textStyle="bold"
+        android:visibility="gone"/>
+
     <!-- Account list -->
     <android.support.v7.widget.RecyclerView
         android:id="@+id/account_list"
@@ -27,7 +45,6 @@
         android:layout_height="match_parent"
         android:layout_margin="16dp"
         app:layoutManager="LinearLayoutManager"
-        tools:context=".ItemListActivity"
         tools:listitem="@layout/item_account">
     </android.support.v7.widget.RecyclerView>
 </LinearLayout>

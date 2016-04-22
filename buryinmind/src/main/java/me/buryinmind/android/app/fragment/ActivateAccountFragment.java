@@ -1,12 +1,14 @@
 package me.buryinmind.android.app.fragment;
 
 import android.app.Fragment;
+import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -104,6 +106,7 @@ public class ActivateAccountFragment extends Fragment {
         if (XStringUtil.isEmpty(email) && !XStringUtil.isEmail(email)) {
             mEmailInputView.setError(getString(R.string.error_invalid_email));
             mEmailInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         mPasswordInputView.setError(null);
@@ -111,11 +114,13 @@ public class ActivateAccountFragment extends Fragment {
         if (XStringUtil.isEmpty(password1)) {
             mPasswordInputView.setError(getString(R.string.error_field_required));
             mPasswordInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         if (password1.length() < GlobalSource.PASSWORD_MIN_SIZE) {
             mPasswordInputView.setError(getString(R.string.error_invalid_password));
             mPasswordInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         mPasswordConfirmInputView.setError(null);
@@ -123,20 +128,31 @@ public class ActivateAccountFragment extends Fragment {
         if (XStringUtil.isEmpty(password2)) {
             mPasswordConfirmInputView.setError(getString(R.string.error_field_required));
             mPasswordConfirmInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         if (password2.length() < GlobalSource.PASSWORD_MIN_SIZE) {
             mPasswordConfirmInputView.setError(getString(R.string.error_invalid_password));
             mPasswordConfirmInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         if (!password1.equals(password2)) {
             mPasswordConfirmInputView.setError(getString(R.string.error_inconsistent_password));
             mPasswordConfirmInputView.requestFocus();
+            mWaiting = false;
             return;
         }
+        if (getActivity().getCurrentFocus() != null) {
+            ((InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
+                    .hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+        }
+        mEmailInputView.clearFocus();
+        mPasswordInputView.clearFocus();
+        mPasswordConfirmInputView.clearFocus();
         if (mGift == null || XStringUtil.isEmpty(mAnswer)) {
             Toast.makeText(getActivity(), R.string.error_exception, Toast.LENGTH_SHORT).show();
+            mWaiting = false;
             return;
         }
         if (mListener != null) {

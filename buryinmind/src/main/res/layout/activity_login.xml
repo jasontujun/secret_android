@@ -11,28 +11,41 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="me.buryinmind.android.app.LoginActivity">
 
-    <!-- Logo -->
-    <LinearLayout
-        android:id="@+id/logo_layout"
+
+    <!-- Login form -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="10dp"
-        android:orientation="vertical">
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:layout_gravity="center_horizontal"
-            android:src="@drawable/logo_buryinmind_normal"/>
-        <TextView
-            android:layout_width="wrap_content"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_logo_name"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="6dp"
-            android:textSize="@dimen/text_size_big_logo"
-            android:textColor="@color/black"
-            android:textStyle="bold"/>
-    </LinearLayout>
+            android:orientation="vertical">
+            <!-- Logo -->
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center_horizontal"
+                android:src="@drawable/logo_buryinmind_normal"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_logo_name"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="10dp"
+                android:textSize="@dimen/text_size_big_logo"
+                android:textColor="@color/black"
+                android:textStyle="bold"/>
+
+            <!-- Login form -->
+            <FrameLayout
+                android:id="@+id/login_form"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+            </FrameLayout>
+
+        </LinearLayout>
+    </ScrollView>
 
     <!-- Login progress -->
     <ProgressBar
@@ -42,13 +55,5 @@
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:visibility="gone"/>
-
-    <!-- Login form -->
-    <ScrollView
-        android:id="@+id/login_form"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/logo_layout">
-    </ScrollView>
 
 </RelativeLayout>

@@ -3,20 +3,23 @@ package me.buryinmind.android.app;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.Fragment;
-import android.content.Context;
+import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Pair;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Toast;
 
+import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -43,17 +46,19 @@ public class LoginActivity extends AppCompatActivity {
     private static final int STEP_START = 1;
     private static final int STEP_LOGIN_LIST = 11;
     private static final int STEP_LOGIN_HAS_USER = 12;
-    private static final int STEP_ACTIVATE_LIST = 21;
-    private static final int STEP_ACTIVATE_ANSWER = 22;// 选中一个种子账号，准备回答问题
-    private static final int STEP_ACTIVATE_PASSWORD = 23;// 选中一个种子账号设置邮箱密码激活
+    private static final int STEP_ACTIVATE_USERS = 21;
+    private static final int STEP_ACTIVATE_GIFTS = 22;
+    private static final int STEP_ACTIVATE_ANSWER = 23;// 选中一个种子账号，准备回答问题
+    private static final int STEP_ACTIVATE_PASSWORD = 24;// 选中一个种子账号设置邮箱密码激活
 
     // UI references.
     private View mProgressView;
     private View mLoginFormView;
-
     private boolean mWaiting;
+
     // temp data
     private List<User> activeAccounts;
+    private List<User> seedAccounts;
     private User chooseUser;
     private String lastUserId;
     private String lastUserName;
@@ -91,20 +96,46 @@ public class LoginActivity extends AppCompatActivity {
                     lastUserName = source.getLastUserName();
                     lastUserDescription = source.getLastUserDescriptions();
                     getFragmentManager().beginTransaction()
-                            .add(R.id.login_form, createFragment(STEP_START))
-                            .addToBackStack(null)
-                            .replace(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
-                            .addToBackStack(null)
+                            .add(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                             .commit();
                 } else {
                     // 没有任何记录，从搜索账号界面开始
                     getFragmentManager().beginTransaction()
                             .add(R.id.login_form, createFragment(STEP_START))
-                            .addToBackStack(null)
+                            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                             .commit();
                 }
             }
         }
+    }
+
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent e) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_BACK:
+                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                    getFragmentManager().popBackStack();
+                    return false;
+                } else {
+                    // 点击2次退出
+                    long currentTime = System.currentTimeMillis();
+                    GlobalSource source = (GlobalSource) XDefaultDataRepo
+                            .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+                    if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
+//                        SystemMgr.getInstance().clearSystem();
+                        finish();
+                    } else {
+                        source.setLastBackTime(currentTime);
+                        Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
+            case KeyEvent.KEYCODE_MENU:
+                break;
+        }
+        return false;
     }
 
     private Fragment createFragment(final int step) {
@@ -119,21 +150,30 @@ public class LoginActivity extends AppCompatActivity {
                             public void onLoading() {
                                 showProgress(true);
                             }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
                             @Override
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
                                 if (result && data != null) {
-                                    Pair<Class, List> data2 = (Pair<Class, List>) data;
-                                    if (data2.first == User.class) {
+                                    Pair<Boolean, List> data2 = (Pair<Boolean, List>) data;
+                                    if (data2.first) {// 点击注册
+                                        seedAccounts = (List<User>)data2.second;
+                                        getFragmentManager().beginTransaction()
+                                                .replace(R.id.login_form, createFragment(STEP_ACTIVATE_USERS))
+                                                .addToBackStack(null)
+                                                .commit();
+                                    } else {// 点击登陆
                                         activeAccounts = (List<User>)data2.second;
                                         getFragmentManager().beginTransaction()
                                                 .replace(R.id.login_form, createFragment(STEP_LOGIN_LIST))
-                                                .addToBackStack(null)
-                                                .commit();
-                                    } else if (data2.first == MemoryGift.class) {
-                                        gifts = (List<MemoryGift>)data2.second;
-                                        getFragmentManager().beginTransaction()
-                                                .replace(R.id.login_form, createFragment(STEP_ACTIVATE_LIST))
                                                 .addToBackStack(null)
                                                 .commit();
                                     }
@@ -143,7 +183,8 @@ public class LoginActivity extends AppCompatActivity {
                 break;
             case STEP_LOGIN_LIST:
                 fragment = new ChooseAccountFragment();
-                arguments.putBoolean(ChooseAccountFragment.KEY_SEED, false);
+                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
+                        ChooseAccountFragment.TYPE_ACTIVE_ACCOUNT_LIST);
                 arguments.putSerializable(ChooseAccountFragment.KEY_ACCOUNTS,
                         (Serializable) activeAccounts);
                 arguments.putSerializable(FragmentInteractListener.KEY,
@@ -152,6 +193,15 @@ public class LoginActivity extends AppCompatActivity {
                             public void onLoading() {
                                 showProgress(true);
                             }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
                             @Override
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
@@ -185,29 +235,97 @@ public class LoginActivity extends AppCompatActivity {
                             public void onLoading() {
                                 showProgress(true);
                             }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
                             @Override
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
                                 if (result) {
                                     // 进入MainActivity
                                     enterMainActivity();
-                                } else {
-
                                 }
                             }
                         });
                 break;
-            case STEP_ACTIVATE_LIST:
+            case STEP_ACTIVATE_USERS:
                 fragment = new ChooseAccountFragment();
-                arguments.putBoolean(ChooseAccountFragment.KEY_SEED, true);
+                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
+                        ChooseAccountFragment.TYPE_SEED_ACCOUNT_LIST);
                 arguments.putSerializable(ChooseAccountFragment.KEY_ACCOUNTS,
-                        (Serializable) gifts);
+                        (Serializable) seedAccounts);
                 arguments.putSerializable(FragmentInteractListener.KEY,
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
                                 showProgress(true);
                             }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
+                            @Override
+                            public void onFinish(boolean result, Object data) {
+                                showProgress(false);
+                                if (result && data != null) {
+                                    chooseUser = (User)data;
+                                    getSeedAccountDetail(chooseUser.uid,
+                                            new XAsyncHttp.Listener<List<MemoryGift>>() {
+                                                @Override
+                                                public void onNetworkError() {
+                                                }
+
+                                                @Override
+                                                public void onFinishError(XHttpResponse xHttpResponse) {
+                                                }
+
+                                                @Override
+                                                public void onFinishSuccess(XHttpResponse xHttpResponse, List<MemoryGift> memoryGifts) {
+                                                    gifts = memoryGifts;
+                                                    getFragmentManager().beginTransaction()
+                                                            .replace(R.id.login_form, createFragment(STEP_ACTIVATE_GIFTS))
+                                                            .addToBackStack(null)
+                                                            .commit();
+                                                }
+                                            });
+                                }
+                            }
+                        });
+                break;
+            case STEP_ACTIVATE_GIFTS:
+                fragment = new ChooseAccountFragment();
+                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
+                        ChooseAccountFragment.TYPE_GIFT_LIST);
+                arguments.putSerializable(ChooseAccountFragment.KEY_GIFTS,
+                        (Serializable) gifts);
+                arguments.putSerializable(ChooseAccountFragment.KEY_CHOOSE_USER,
+                        chooseUser);
+                arguments.putSerializable(FragmentInteractListener.KEY,
+                        new FragmentInteractListener() {
+                            @Override
+                            public void onLoading() {
+                                showProgress(true);
+                            }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
                             @Override
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
@@ -216,6 +334,7 @@ public class LoginActivity extends AppCompatActivity {
                                     getFragmentManager().beginTransaction()
                                             .replace(R.id.login_form, createFragment(STEP_ACTIVATE_ANSWER))
                                             .addToBackStack(null)
+                                            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
                                 }
                             }
@@ -230,6 +349,15 @@ public class LoginActivity extends AppCompatActivity {
                             public void onLoading() {
                                 showProgress(true);
                             }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
                             @Override
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
@@ -238,6 +366,7 @@ public class LoginActivity extends AppCompatActivity {
                                     getFragmentManager().beginTransaction()
                                             .replace(R.id.login_form, createFragment(STEP_ACTIVATE_PASSWORD))
                                             .addToBackStack(null)
+                                            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
                                 }
                             }
@@ -253,6 +382,15 @@ public class LoginActivity extends AppCompatActivity {
                             public void onLoading() {
                                 showProgress(true);
                             }
+
+                            @Override
+                            public void onBack() {
+                                showProgress(false);
+                                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                    getFragmentManager().popBackStack();
+                                }
+                            }
+
                             @Override
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
@@ -265,6 +403,7 @@ public class LoginActivity extends AppCompatActivity {
                                         getFragmentManager().beginTransaction()
                                                 .replace(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
                                                 .addToBackStack(null)
+                                                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                                 .commit();
                                     } else {
                                         // 进入MainActivity
@@ -298,7 +437,6 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-
     private void checkTokenLogin(String userId, String token) {
         if (mWaiting)
             return;
@@ -314,10 +452,8 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                         showProgress(false);
                         getFragmentManager().beginTransaction()
-                                .add(R.id.login_form, createFragment(STEP_START))
-                                .addToBackStack(null)
-                                .replace(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
-                                .addToBackStack(null)
+                                .add(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                 .commit();
                     }
 
@@ -327,10 +463,8 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         showProgress(false);
                         getFragmentManager().beginTransaction()
-                                .add(R.id.login_form, createFragment(STEP_START))
-                                .addToBackStack(null)
-                                .replace(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
-                                .addToBackStack(null)
+                                .add(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                 .commit();
                     }
 
@@ -354,6 +488,44 @@ public class LoginActivity extends AppCompatActivity {
                             source.loginSuccess(user, token);
                             enterMainActivity();
                         }
+                    }
+                });
+    }
+
+    private void getSeedAccountDetail(String userId, final XAsyncHttp.Listener<List<MemoryGift>> listener) {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        showProgress(true);
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.getSeedUserDetail(userId),
+                new XJsonArrayHandler(),
+                new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onNetworkError() {
+                        mWaiting = false;
+                        Toast.makeText(LoginActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        showProgress(false);
+                        if (listener != null)
+                            listener.onNetworkError();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
+                        Toast.makeText(LoginActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        showProgress(false);
+                        if (listener != null)
+                            listener.onFinishError(xHttpResponse);
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray ja) {
+                        mWaiting = false;
+                        showProgress(false);
+                        List<MemoryGift> gifts = MemoryGift.fromJson(ja);
+                        if (listener != null)
+                            listener.onFinishSuccess(xHttpResponse, gifts);
                     }
                 });
     }

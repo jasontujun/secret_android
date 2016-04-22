@@ -3,11 +3,11 @@ package me.buryinmind.android.app.fragment;
 import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -21,13 +21,11 @@ import com.tj.xengine.core.utils.XStringUtil;
 
 import org.json.JSONArray;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.data.GlobalSource;
-import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
 
@@ -90,18 +88,24 @@ public class SearchAccountFragment extends Fragment {
         if (XStringUtil.isEmpty(name)) {
             mAccountInputView.setError(getString(R.string.error_field_required));
             mAccountInputView.requestFocus();
+            mWaiting = false;
             return;
         }
         if (name.length() < GlobalSource.NAME_MIN_SIZE) {
             mAccountInputView.setError(getString(R.string.error_invalid_name));
             mAccountInputView.requestFocus();
+            mWaiting = false;
             return;
         }
+        ((InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
+                .hideSoftInputFromWindow(mAccountInputView.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+        mAccountInputView.clearFocus();
         if (mListener != null) {
             mListener.onLoading();
         }
         MyApplication.getAsyncHttp().execute(
-                isRegister ? ApiUtil.searchSeedUser(name, null) : ApiUtil.searchActiveUser(name, null),
+                isRegister ? ApiUtil.searchSeedUser(name, null)
+                        : ApiUtil.searchActiveUser(name, null),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
                     @Override
@@ -125,16 +129,10 @@ public class SearchAccountFragment extends Fragment {
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray jsonArray) {
                         mWaiting = false;
-                        if (isRegister) {
-                            List<MemoryGift> gifts = MemoryGift.fromJson(jsonArray);
-                            if (mListener != null) {
-                                mListener.onFinish(true, new Pair<Class, List>(MemoryGift.class, gifts));
-                            }
-                        } else {
-                            List<User> users = User.fromJson(jsonArray);
-                            if (mListener != null) {
-                                mListener.onFinish(true, new Pair<Class, List>(User.class, users));
-                            }
+                        List<User> users = User.fromJson(jsonArray);
+                        Pair<Boolean, List<User>> data = new Pair<Boolean, List<User>>(isRegister, users);
+                        if (mListener != null) {
+                            mListener.onFinish(true, data);
                         }
                     }
                 });

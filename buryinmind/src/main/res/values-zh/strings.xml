@@ -13,6 +13,7 @@
     <string name="button_register">第一次</string>
     <string name="button_check_answer">确认挚友</string>
     <string name="button_activate">加入</string>
+    <string name="button_back">返回</string>
 
     <string name="error_network">网络有点问题哦</string>
     <string name="error_exception">出现异常!</string>
@@ -24,7 +25,10 @@
     <string name="error_inconsistent_password">两次输入密码不一致</string>
     <string name="error_login_fail">抱歉，密码不正确!</string>
 
-    <string name="info_send_memory">时光匆匆，不忘与你</string>
-    <string name="info_activate_account">Ta们可能和你有一段不忘的回忆，请找到熟悉的Ta并确认:</string>
-    <string name="info_choose_account">请选择你“自己”:</string>
+    <string name="info_press_back_again">再按一次退出程序</string>
+    <string name="info_question">对你的问题:</string>
+    <string name="info_about">对你的描述:</string>
+    <string name="info_activate_account">Ta们可能有和你的回忆，请选择一个并回答问题，以确认你们的关系:</string>
+    <string name="info_choose_account">可能有同名用户，选择最接近自己的:</string>
+    <string name="info_account_none">抱歉，还没有此用户</string>
 </resources>

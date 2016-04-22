@@ -13,21 +13,27 @@
     <string name="button_register">First Time</string>
     <string name="button_check_answer">Confirm Friend</string>
     <string name="button_activate">Join In</string>
+    <string name="button_back">Back</string>
 
     <string name="error_network">something wrong with your network</string>
     <string name="error_exception">exception!</string>
     <string name="error_field_required">Required</string>
-    <string name="error_api_return_failed">http failed!</string>
+    <string name="error_api_return_failed">request failed!</string>
     <string name="error_invalid_email">Email format incorrect!</string>
     <string name="error_invalid_name">Name is too Short</string>
     <string name="error_invalid_password">This password is too short, at least 6</string>
     <string name="error_inconsistent_password">The two passwords are inconsistent</string>
     <string name="error_login_fail">Sorry, Password is not correct!</string>
 
-    <string name="info_send_memory">bury a memory</string>
+    <string name="info_press_back_again">Press back again if exit</string>
+    <string name="info_question">Question:</string>
+    <string name="info_about">Description of you:</string>
     <string name="info_activate_account">People below may bury a memory with you in their mind,
-        please choose your friend and confirm:</string>
-    <string name="info_choose_account">Please choose the real you:</string>
+        please choose one and confirm your friend:</string>
+    <string name="info_choose_account">People may have the same name as yours,
+        Please choose the closest one:</string>
+    <string name="info_account_none">Sorry, No such user.</string>
+    <string name="info_gift_none">Sorry, No such user.</string>
 
 
 
