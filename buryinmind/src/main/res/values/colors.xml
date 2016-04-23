@@ -5,4 +5,9 @@
     <color name="gray">#787878</color>
     <color name="transparentGray">#64a7a7a7</color>
     <color name="darkBlue">#002a84</color>
+
+
+    <color name="red">#b10000</color>
+    <color name="green">#00b700</color>
+    <color name="yellow">#dcdc00</color>
 </resources>

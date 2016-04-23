@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+    <View
+        android:layout_width="2dp"
+        android:layout_height="20dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/darkGray"/>
+        <ImageView
+            android:id="@+id/timeline_node_bg"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/timeline_solid_node"
+            android:scaleType="fitCenter"/>
+    <View
+        android:layout_width="2dp"
+        android:layout_height="6dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/darkGray"/>
+        <TextView
+            android:id="@+id/timeline_node_txt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_below="@+id/timeline_node_bg"
+            android:padding="6dp"
+            android:textSize="@dimen/text_size_middle"
+            android:textColor="@color/gray"
+            tools:text="岁月静好，不忘有你"/>
+    <View
+        android:layout_width="2dp"
+        android:layout_height="20dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/darkGray"/>
+</LinearLayout>

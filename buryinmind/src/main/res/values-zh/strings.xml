@@ -14,6 +14,7 @@
     <string name="button_check_answer">确认挚友</string>
     <string name="button_activate">加入</string>
     <string name="button_back">返回</string>
+    <string name="button_settings">设置</string>
 
     <string name="error_network">网络有点问题哦</string>
     <string name="error_exception">出现异常!</string>
