@@ -11,7 +11,7 @@ import me.buryinmind.android.app.MyApplication;
  */
 public abstract class ApiUtil {
 //    private static final String DOMAIN = "http://127.0.0.1";
-    private static final String DOMAIN = "http://192.168.1.58:3000";
+    private static final String DOMAIN = "http://192.168.0.102:3000";
 
     public static XHttpRequest searchSeedUser(String name, List<String> des) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/search")

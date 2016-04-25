@@ -22,14 +22,14 @@
             app:contentScrim="?attr/colorPrimary"
             app:layout_scrollFlags="scroll|exitUntilCollapsed"
             app:titleEnabled="false">
-            <ImageView
-                android:id="@+id/main_cover_img"
+            <!-- Account Info -->
+            <include
+                layout="@layout/part_account_profile"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
                 android:fitsSystemWindows="true"
-                android:src="@drawable/test"
                 app:layout_collapseMode="parallax"/>
+
             <android.support.v7.widget.Toolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
@@ -51,7 +51,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:layoutManager="LinearLayoutManager"
-            tools:listitem="@layout/item_timeline_tag"/>
+            tools:listitem="@layout/item_timeline_node"/>
     </android.support.v4.widget.SwipeRefreshLayout>
 
     <android.support.design.widget.FloatingActionButton
@@ -60,7 +60,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:src="@drawable/headicon_seed"
-        app:layout_anchor="@id/app_bar"
+        app:layout_anchor="@id/timeline_refresh_layout"
         app:layout_anchorGravity="bottom|end" />
 
 </android.support.design.widget.CoordinatorLayout>
