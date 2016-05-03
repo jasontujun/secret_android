@@ -35,5 +35,9 @@
         Please choose the closest one:</string>
     <string name="info_account_none">Sorry, No such user.</string>
     <string name="info_gift_none">Sorry, No such user.</string>
+    <string name="info_set_birthday">First, set your birthday:</string>
+    <string name="info_set_birthday_btn">Birthday</string>
+    <string name="info_timeline_header">born out &#8230;</string>
+    <string name="info_timeline_footer">To be continued &#8230;</string>
 
 </resources>

@@ -74,7 +74,7 @@ public class LoginActivity extends AppCompatActivity {
 
         // Set up the login form.
         mProgressView = findViewById(R.id.login_progress);
-        mLoginFormView = findViewById(R.id.login_form);
+        mLoginFormView = findViewById(R.id.content_layout);
 
         if (savedInstanceState == null) {
             GlobalSource source = (GlobalSource) XDefaultDataRepo
@@ -96,13 +96,13 @@ public class LoginActivity extends AppCompatActivity {
                     lastUserName = source.getLastUserName();
                     lastUserDescription = source.getLastUserDescriptions();
                     getFragmentManager().beginTransaction()
-                            .add(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                            .add(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                             .commit();
                 } else {
                     // 没有任何记录，从搜索账号界面开始
                     getFragmentManager().beginTransaction()
-                            .add(R.id.login_form, createFragment(STEP_START))
+                            .add(R.id.content_layout, createFragment(STEP_START))
                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                             .commit();
                 }
@@ -167,13 +167,13 @@ public class LoginActivity extends AppCompatActivity {
                                     if (data2.first) {// 点击注册
                                         seedAccounts = (List<User>)data2.second;
                                         getFragmentManager().beginTransaction()
-                                                .replace(R.id.login_form, createFragment(STEP_ACTIVATE_USERS))
+                                                .replace(R.id.content_layout, createFragment(STEP_ACTIVATE_USERS))
                                                 .addToBackStack(null)
                                                 .commit();
                                     } else {// 点击登陆
                                         activeAccounts = (List<User>)data2.second;
                                         getFragmentManager().beginTransaction()
-                                                .replace(R.id.login_form, createFragment(STEP_LOGIN_LIST))
+                                                .replace(R.id.content_layout, createFragment(STEP_LOGIN_LIST))
                                                 .addToBackStack(null)
                                                 .commit();
                                     }
@@ -208,7 +208,7 @@ public class LoginActivity extends AppCompatActivity {
                                 if (result && data != null) {
                                     chooseUser = (User)data;
                                     getFragmentManager().beginTransaction()
-                                            .replace(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                                            .replace(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                             .addToBackStack(null)
                                             .commit();
 
@@ -294,7 +294,7 @@ public class LoginActivity extends AppCompatActivity {
                                                 public void onFinishSuccess(XHttpResponse xHttpResponse, List<MemoryGift> memoryGifts) {
                                                     gifts = memoryGifts;
                                                     getFragmentManager().beginTransaction()
-                                                            .replace(R.id.login_form, createFragment(STEP_ACTIVATE_GIFTS))
+                                                            .replace(R.id.content_layout, createFragment(STEP_ACTIVATE_GIFTS))
                                                             .addToBackStack(null)
                                                             .commit();
                                                 }
@@ -332,7 +332,7 @@ public class LoginActivity extends AppCompatActivity {
                                 if (result && data != null) {
                                     chooseGift = (MemoryGift)data;
                                     getFragmentManager().beginTransaction()
-                                            .replace(R.id.login_form, createFragment(STEP_ACTIVATE_ANSWER))
+                                            .replace(R.id.content_layout, createFragment(STEP_ACTIVATE_ANSWER))
                                             .addToBackStack(null)
                                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
@@ -364,7 +364,7 @@ public class LoginActivity extends AppCompatActivity {
                                 if (result) {
                                     giftAnswer = (String) data;
                                     getFragmentManager().beginTransaction()
-                                            .replace(R.id.login_form, createFragment(STEP_ACTIVATE_PASSWORD))
+                                            .replace(R.id.content_layout, createFragment(STEP_ACTIVATE_PASSWORD))
                                             .addToBackStack(null)
                                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
@@ -401,7 +401,7 @@ public class LoginActivity extends AppCompatActivity {
                                         lastUserName = chooseGift.receiverName;
                                         lastUserDescription = chooseGift.receiverDescription;
                                         getFragmentManager().beginTransaction()
-                                                .replace(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                                                .replace(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                                 .addToBackStack(null)
                                                 .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                                 .commit();
@@ -452,7 +452,7 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                         showProgress(false);
                         getFragmentManager().beginTransaction()
-                                .add(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                                .add(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                 .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                 .commit();
                     }
@@ -463,7 +463,7 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         showProgress(false);
                         getFragmentManager().beginTransaction()
-                                .add(R.id.login_form, createFragment(STEP_LOGIN_HAS_USER))
+                                .add(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                 .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                 .commit();
                     }

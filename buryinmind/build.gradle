@@ -10,7 +10,14 @@ android {
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
+        generatedDensities = []  // 默认只生成 hdpi 和 xhdpi的png图
     }
+
+    // This is handled for you by the 2.0+ Gradle Plugin
+    aaptOptions {
+        additionalParameters "--no-version-vectors"
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -26,5 +33,6 @@ dependencies {
     compile 'com.android.support:design:23.3.0'
     compile 'com.android.support:recyclerview-v7:23.3.0'
     compile 'com.github.bumptech.glide:glide:3.7.0'
+    compile 'com.github.flavienlaurent.datetimepicker:library:0.0.2'
     compile files('libs/xengine_android.jar')
 }

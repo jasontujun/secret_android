@@ -21,8 +21,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal">
             <ImageView
-                android:layout_width="@dimen/timeline_width"
-                android:layout_height="@dimen/timeline_width"
+                android:layout_width="@dimen/timeline_tag_size"
+                android:layout_height="@dimen/timeline_tag_size"
                 android:layout_centerInParent="true"
                 android:src="@drawable/icon_hollow_node"/>
             <TextView

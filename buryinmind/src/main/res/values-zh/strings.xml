@@ -32,4 +32,8 @@
     <string name="info_activate_account">Ta们可能有和你的回忆，请选择一个并回答问题，以确认你们的关系:</string>
     <string name="info_choose_account">可能有同名用户，选择最接近自己的:</string>
     <string name="info_account_none">抱歉，还没有此用户</string>
+    <string name="info_set_birthday">首先，说出你的生日:</string>
+    <string name="info_set_birthday_btn">生日</string>
+    <string name="info_timeline_header">粗生啦 &#8230;</string>
+    <string name="info_timeline_footer">未完待续 &#8230;</string>
 </resources>

@@ -1,1 +1,1 @@
-include ':secretapp', ':buryinmind'
+include ':buryinmind'

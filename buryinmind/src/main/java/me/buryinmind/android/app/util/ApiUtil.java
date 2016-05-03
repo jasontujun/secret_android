@@ -1,17 +1,26 @@
 package me.buryinmind.android.app.util;
 
+import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.network.http.XHttpRequest;
 
 import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
+import me.buryinmind.android.app.data.GlobalSource;
 
 /**
  * Created by jason on 2016/4/20.
  */
 public abstract class ApiUtil {
 //    private static final String DOMAIN = "http://127.0.0.1";
-    private static final String DOMAIN = "http://192.168.0.102:3000";
+    private static final String DOMAIN = "http://192.168.0.5:3000";
+
+    /**
+     * 只管接口调用的成败结果的简单回调。
+     */
+    public static interface SimpleListener {
+        void onResult(boolean result);
+    }
 
     public static XHttpRequest searchSeedUser(String name, List<String> des) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/search")
@@ -74,4 +83,25 @@ public abstract class ApiUtil {
                 .addStringParam("uid", uid)
                 .addStringParam("token", token);
     };
+
+    private static String getLocalToken() {
+        GlobalSource source = (GlobalSource) XDefaultDataRepo
+                .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+        return source.getUserToken();
+    }
+
+    public static XHttpRequest updateBornTime(String uid, long bornTime) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("btime", String.valueOf(bornTime));
+    }
+
+    public static XHttpRequest getMemoryList(String uid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/list")
+                .setMethod(XHttpRequest.Method.GET)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken());
+    }
 }
