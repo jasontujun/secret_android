@@ -22,6 +22,8 @@ import me.buryinmind.android.app.util.TimeUtil;
  */
 public class Memory {
 
+    public static final Comparator<Memory> comparator = new Comp();
+
     @XId
     public String mid;
 
@@ -44,6 +46,14 @@ public class Memory {
     public int age;// 临时属性，计算得出
 
 
+    public void resetAge() {
+        GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+        final User user = source.getUser();
+        if (user != null) {
+            this.age = TimeUtil.calculateAge(user.bornTime, this.happenTime);
+        }
+    }
+
     public static Memory fromJson(JSONObject jo) {
         if (jo == null)
             return null;
@@ -57,11 +67,7 @@ public class Memory {
             memory.ownerName = jo.getString("owner_name");
             memory.happenTime = jo.getLong("happen_time");
             memory.createTime = jo.getLong("create_time");
-            GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-            final User user = source.getUser();
-            if (user != null && user.bornTime != 0) {
-                memory.age = TimeUtil.calculateAge(user.bornTime, memory.happenTime);
-            }
+            memory.resetAge();
             return memory;
         } catch (JSONException e) {
             e.printStackTrace();
@@ -89,7 +95,7 @@ public class Memory {
         }
     }
 
-    public static class Comp implements Comparator<Memory> {
+    private static class Comp implements Comparator<Memory> {
 
         @Override
         public int compare(Memory lhs, Memory rhs) {

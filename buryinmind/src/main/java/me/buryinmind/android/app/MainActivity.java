@@ -2,14 +2,10 @@ package me.buryinmind.android.app;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapShader;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
@@ -28,11 +24,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool;
-import com.bumptech.glide.load.resource.bitmap.BitmapTransformation;
 import com.fourmob.datetimepicker.date.DatePickerDialog;
 import com.tj.xengine.android.data.listener.XHandlerIdDataSourceListener;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
+import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
@@ -41,23 +36,30 @@ import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 import me.buryinmind.android.app.data.GlobalSource;
+import me.buryinmind.android.app.dialog.AddMemoryDialog;
+import me.buryinmind.android.app.dialog.ConfirmDialog;
+import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.User;
+import me.buryinmind.android.app.uicontrol.ParticleLayout;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.CircleTransform;
+import me.buryinmind.android.app.util.TimeUtil;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "BIM_MainActivity";
-    private static final String DATEPICKER_TAG = "datepicker";
+    public static final String TAG_DATE_PICKER = "datepicker";
 
     private View mProgressView;
     private View mContentView;
@@ -70,7 +72,8 @@ public class MainActivity extends AppCompatActivity {
     private View mBirthdayView;
     private Button mBirthdayBtn;
 
-    private boolean mCollapsed;
+    private boolean mListTop = true;
+    private boolean mCollapsed = false;
 
     private boolean mWaiting;
     private boolean mAddingMemory;
@@ -114,7 +117,6 @@ public class MainActivity extends AppCompatActivity {
                     XLog.d(TAG, "mAppBar already collapsed");
                     mCollapsed = true;
                 } else {
-                    XLog.d(TAG, "mAppBar expand");
                     mCollapsed = false;
                 }
             }
@@ -124,14 +126,20 @@ public class MainActivity extends AppCompatActivity {
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
             }
-
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
+                // 已经滑到顶部，不能再向上滑了
                 if (!ViewCompat.canScrollVertically(recyclerView, -1)) {
-                    // 已经滑到顶部，不能再向上滑了
-                    XLog.d(TAG, "mTimelineView already scroll to top! expand appbar!");
-                    mAppBar.setExpanded(true, true);
+                    if (!mListTop) {
+                        mListTop = true;
+                        mAppBar.setExpanded(true, true);
+                        XLog.d(TAG, "mTimelineView scroll to top! expand appbar!");
+                    } else {
+                        XLog.d(TAG, "mTimelineView already scroll to top! not expand appbar!");
+                    }
+                } else {
+                    mListTop = false;
                 }
             }
         });
@@ -157,16 +165,29 @@ public class MainActivity extends AppCompatActivity {
         mAddBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mAddingMemory) {
-                    mAddingMemory = false;
-                    Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_back);
-                    animation.setFillAfter(true);
-                    mAddBtn.startAnimation(animation);
-                } else {
+                if (!mAddingMemory) {
                     mAddingMemory = true;
                     Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_start);
                     animation.setFillAfter(true);
                     mAddBtn.startAnimation(animation);
+                    AddMemoryDialog.newInstance(new DialogListener() {
+                        @Override
+                        public void onDone(Object... result) {
+                            String name = (String) result[0];
+                            Calendar date = (Calendar) result[1];
+                            // 统一改成GMT时区,再上传服务器
+                            date.setTimeZone(TimeZone.getTimeZone("GMT"));
+                            addMemory(name, date.getTimeInMillis());
+                        }
+
+                        @Override
+                        public void onDismiss() {
+                            mAddingMemory = false;
+                            Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_back);
+                            animation.setFillAfter(true);
+                            mAddBtn.startAnimation(animation);
+                        }
+                    }).show(getSupportFragmentManager(), AddMemoryDialog.TAG);
                 }
             }
         });
@@ -190,87 +211,64 @@ public class MainActivity extends AppCompatActivity {
                 XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
                         XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
                 int pos = memorySource.getIndexById(memory.mid);
-
-//                mAdapter.notifyItemInserted();
+                mAdapter.addData(pos, memory);
+                mTimelineView.scrollToPosition(pos + 1);
             }
+
 
             @Override
             public void onAddAllInUI(List<Memory> list) {
-
+                XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
+                        XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                mAdapter.setData(memorySource.copyAll());
             }
 
             @Override
             public void onDeleteInUI(Memory memory) {
-
+                mAdapter.deleteData(memory);
             }
 
             @Override
-            public void onDeleteInUI(List<Memory> list) {
-
+            public void onDeleteAllInUI(List<Memory> list) {
+                XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
+                        XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                mAdapter.setData(memorySource.copyAll());
             }
         });
         // init first ui
         if (user.bornTime == 0) {
-            // TODO 让用户设置出生日期,再生成时间线
-            final Calendar calendar = Calendar.getInstance();
-            int year = calendar.get(Calendar.YEAR);
-            final DatePickerDialog datePickerDialog = DatePickerDialog.newInstance(
-                    new DatePickerDialog.OnDateSetListener() {
+            // 让用户设置出生日期,再生成时间线
+            mBirthdayView.setVisibility(View.VISIBLE);
+            mBirthdayBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showDatePicker(Calendar.getInstance(), new DatePickerDialog.OnDateSetListener() {
                         @Override
                         public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
                             Calendar birthCal = Calendar.getInstance();
                             birthCal.set(year, month, day);
-                            birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));// 统一改成GMT时区,再上传服务器
+                            // 统一改成GMT时区,再上传服务器
+                            birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
                             final long bornTime = birthCal.getTimeInMillis();
-                            XLog.d(TAG, "select year=" + year + ",month=" + month + ",day=" + day + ",bornTime=" + bornTime);
                             updateBornTime(user.uid, bornTime, new ApiUtil.SimpleListener() {
                                 @Override
                                 public void onResult(boolean result) {
                                     if (result) {
                                         user.bornTime = bornTime;
                                         // 生成时间线
-                                        mBirthdayView.setVisibility(View.GONE);
-                                        mTimelineView.setVisibility(View.VISIBLE);
-                                        mAddBtn.setVisibility(View.VISIBLE);
-                                        // init list adapter
-                                        Calendar bornCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-                                        bornCal.setTimeInMillis(user.bornTime);
-                                        bornCal.setTimeZone(TimeZone.getDefault());
-                                        mAdapter = new TimelineAdapter(bornCal, memorySource.copyAll());
-                                        mTimelineView.setAdapter(mAdapter);
-                                        mTimelineView.setItemAnimator(new DefaultItemAnimator());
-                                        // request memory data
-                                        requestMemoryList(user.uid);
+                                        showTimeline();
                                     }
                                 }
                             });
                         }
-                    },
-                    year, calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH), false);
-            datePickerDialog.setYearRange(1902, year);
-            mBirthdayView.setVisibility(View.VISIBLE);
-            mBirthdayBtn.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    datePickerDialog.show(getSupportFragmentManager(), DATEPICKER_TAG);
+                    });
                 }
             });
             mTimelineView.setVisibility(View.GONE);
             mAddBtn.setVisibility(View.GONE);
         } else {
             // 生成时间线
-            mBirthdayView.setVisibility(View.GONE);
-            mTimelineView.setVisibility(View.VISIBLE);
-            mAddBtn.setVisibility(View.VISIBLE);
-            // init list adapter
-            Calendar bornCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-            bornCal.setTimeInMillis(user.bornTime);
-            bornCal.setTimeZone(TimeZone.getDefault());
-            mAdapter = new TimelineAdapter(bornCal, memorySource.copyAll());
-            mTimelineView.setAdapter(mAdapter);
-            mTimelineView.setItemAnimator(new DefaultItemAnimator());
-            // request memory data
-            requestMemoryList(user.uid);
+            showTimeline();
         }
     }
 
@@ -298,13 +296,42 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void requestMemoryList(String uid) {
+    private DialogFragment showDatePicker(Calendar initCal, DatePickerDialog.OnDateSetListener listener) {
+        if (initCal == null) {
+            initCal = Calendar.getInstance();
+        }
+        DatePickerDialog datePickerDialog = DatePickerDialog.newInstance(listener,
+                initCal.get(Calendar.YEAR), initCal.get(Calendar.MONTH),
+                initCal.get(Calendar.DAY_OF_MONTH), false);
+        datePickerDialog.setYearRange(1902, Calendar.getInstance().get(Calendar.YEAR));
+        datePickerDialog.show(getSupportFragmentManager(), TAG_DATE_PICKER);
+        return datePickerDialog;
+    }
+
+    private void showTimeline() {
+        // 生成时间线
+        mBirthdayView.setVisibility(View.GONE);
+        mTimelineView.setVisibility(View.VISIBLE);
+        mAddBtn.setVisibility(View.VISIBLE);
+        // init list adapter
+        XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
+                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+        mAdapter = new TimelineAdapter(memorySource.copyAll());
+        mTimelineView.setAdapter(mAdapter);
+        mTimelineView.setItemAnimator(new DefaultItemAnimator());
+        // request memory data
+        requestMemoryList();
+    }
+
+    private void requestMemoryList() {
         if (mWaiting)
             return;
         mWaiting = true;
         showProgress(true);
+        User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
         MyApplication.getAsyncHttp().execute(
-                ApiUtil.getMemoryList(uid),
+                ApiUtil.getMemoryList(user.uid),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
                     @Override
@@ -329,9 +356,83 @@ public class MainActivity extends AppCompatActivity {
                         XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
                                 XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
                         source.addAll(memories);
-                        source.sort(new Memory.Comp());
+                        source.sort(Memory.comparator);
                     }
                 });
+    }
+
+    private void addMemory(String memoryName, long happenTime) {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.addMemory(user.uid, memoryName, happenTime),
+                new XJsonObjectHandler(),
+                new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onNetworkError() {
+                        mWaiting = false;
+                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
+                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
+                        mWaiting = false;
+                        Memory memory = Memory.fromJson(jsonObject);
+                        if (memory != null) {
+                            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                            source.add(memory);
+                            source.sort(Memory.comparator);
+                        }
+                    }
+                }
+        );
+    }
+
+    private void deleteMemory(final Memory memory) {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.deleteMemory(user.uid, memory.mid),
+                new XAsyncHttp.Listener() {
+                    @Override
+                    public void onNetworkError() {
+                        XLog.d(TAG, "deleteMemory onNetworkError()! mid=" + memory.mid);
+                        mWaiting = false;
+                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        mAdapter.resetData(memory);
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        XLog.d(TAG, "deleteMemory onFinishError()! mid=" + memory.mid);
+                        mWaiting = false;
+                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        mAdapter.resetData(memory);
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object obj) {
+                        XLog.d(TAG, "deleteMemory onFinishSuccess()! mid=" + memory.mid);
+                        mWaiting = false;
+                        XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                        source.deleteById(memory.mid);
+                    }
+                }
+        );
     }
 
     private void updateBornTime(String uid, long bornTime, final ApiUtil.SimpleListener listener) {
@@ -374,19 +475,80 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
     private class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHolder> {
 
         private static final int TYPE_HEADER = 1;
         private static final int TYPE_FOOTER = 2;
         private static final int TYPE_NODE = 3;
 
-        private Calendar mBornCal;
+        private Map<Integer, Memory> mAges;
         private List<Memory> mValues;
+        private List<Memory> mToBeDelete;
 
-        public TimelineAdapter(Calendar bornCal, List<Memory> items) {
-            mBornCal = bornCal;
-            mValues = items;
+        public TimelineAdapter(List<Memory> items) {
+            mAges = new HashMap<Integer, Memory>();
+            mToBeDelete = new ArrayList<Memory>();
+            setData(items);
+        }
+
+        public void setData(final List<Memory> memories) {
+            mValues = memories;
+            mToBeDelete.clear();
+            mAges.clear();
+            for (Memory memory : memories) {
+                if (!mAges.containsKey(memory.age)) {
+                    mAges.put(memory.age, memory);
+                }
+            }
+            notifyDataSetChanged();
+        }
+
+        public void resetData(Memory memory) {
+            mToBeDelete.remove(memory);
+            int pos = mValues.indexOf(memory);
+            if (pos == -1) {
+                return;
+            }
+            notifyItemChanged(pos + 1);
+        }
+
+        public void addData(int pos, Memory memory) {
+            mValues.add(pos, memory);
+            if (!mAges.containsKey(memory.age)) {
+                mAges.put(memory.age, memory);
+            } else {
+                // 如果新增的memory比同样age的memory早，则替换
+                Memory m = mAges.get(memory.age);
+                if (Memory.comparator.compare(memory, m) < 0) {
+                    mAges.put(memory.age, memory);
+                }
+            }
+            notifyItemInserted(pos + 1);
+            notifyItemRangeChanged(pos + 1, Math.min(2, mValues.size() - (pos + 1)));
+        }
+
+        public void deleteData(Memory memory) {
+            int pos = mValues.indexOf(memory);
+            if (pos == -1) {
+                return;
+            }
+            mValues.remove(memory);
+            mToBeDelete.remove(memory);
+            if (memory.equals(mAges.get(memory.age))) {
+                boolean needRemove = true;
+                for (Memory item : mValues) {
+                    if (item.age == memory.age) {
+                        mAges.put(item.age, item);
+                        needRemove = false;
+                        break;
+                    }
+                }
+                if (needRemove) {
+                    mAges.remove(memory.age);
+                }
+            }
+            notifyItemRemoved(pos + 1);
+            notifyItemRangeChanged(pos + 1, Math.min(2, mValues.size() - (pos + 1)));
         }
 
         @Override
@@ -417,32 +579,108 @@ public class MainActivity extends AppCompatActivity {
         public void onBindViewHolder(final ViewHolder holder, int position) {
             int type = getItemViewType(position);
             if (type == TYPE_HEADER) {
-                holder.mBornView.setText(XStringUtil.calendar2str(mBornCal, "."));
-            } else if (type == TYPE_NODE) {
+                holder.mBornLayout.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+                        final User user = source.getUser();
+                        Calendar lastBornTime = TimeUtil.getCalendar(user.bornTime);
+                        showDatePicker(lastBornTime, new DatePickerDialog.OnDateSetListener() {
+                            @Override
+                            public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
+                                Calendar birthCal = Calendar.getInstance();
+                                birthCal.set(year, month, day);
+                                // 统一改成GMT时区,再上传服务器
+                                birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
+                                final long bornTime = birthCal.getTimeInMillis();
+                                updateBornTime(user.uid, bornTime, new ApiUtil.SimpleListener() {
+                                    @Override
+                                    public void onResult(boolean result) {
+                                        if (result) {
+                                            user.bornTime = bornTime;
+                                            mAdapter.notifyDataSetChanged();
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+                GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+                User user = source.getUser();
+                holder.mBornView.setText(XStringUtil.calendar2str(TimeUtil.getCalendar(user.bornTime), "."));
+            } else if (type == TYPE_FOOTER) {
+                holder.mFooterView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mAddBtn.performClick();
+                    }
+                });
+            } else {
                 final Memory item = mValues.get(position - 1);
-                if (true) {
+                if (mAges.get(item.age).equals(item)) {
                     holder.mAgeView.setText(String.valueOf(item.age));
-                    holder.mMemoryNameView.setText(item.name);
                     holder.mAgeLayout.setVisibility(View.VISIBLE);
                 }else {
                     holder.mAgeLayout.setVisibility(View.GONE);
                 }
-                Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-                calendar.setTimeInMillis(item.happenTime);
-                calendar.setTimeZone(TimeZone.getDefault());
-                holder.mMemoryDateView.setText(XStringUtil.calendar2str(calendar, "."));
-                if (item.secrets != null && item.secrets.size() > 0) {
-                    holder.mMemoryImageLayout.setVisibility(View.VISIBLE);
-//                    holder.mMemoryImage// TODO 加载图片
+                if (mToBeDelete.contains(item)) {
+                    // 正在删除的条目，不显示内容，也不能点击
+                    holder.mMemoryLayout.hide();
+                    holder.mMemoryLayout.setOnClickListener(null);
                 } else {
-                    holder.mMemoryImageLayout.setVisibility(View.GONE);
-                }
-                holder.mMemoryLayout.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Toast.makeText(MainActivity.this, "点击Memory:" + item.name, Toast.LENGTH_SHORT).show();
+                    holder.mMemoryNameView.setText(item.name);
+                    holder.mMemoryDateView.setText(XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenTime), "."));
+                    if (item.secrets != null && item.secrets.size() > 0) {
+                        holder.mMemoryImageLayout.setVisibility(View.VISIBLE);
+//                    holder.mMemoryImage// TODO 加载图片
+                    } else {
+                        holder.mMemoryImageLayout.setVisibility(View.GONE);
                     }
-                });
+                    holder.mMemoryLayout.setParticle(R.drawable.particle_star);
+                    holder.mMemoryLayout.reset();
+                    holder.mMemoryLayout.setListener(new ParticleLayout.Listener() {
+                        @Override
+                        public void onStart() {
+                        }
+                        @Override
+                        public void onEnd() {
+                            GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+                            final User user = source.getUser();
+                            ConfirmDialog.newInstance(
+                                    String.format(getResources().getString(R.string.info_delete_memory),
+                                            TimeUtil.calculateAge(user.bornTime, item.happenTime),
+                                            item.name),
+                                    new DialogListener() {
+                                        boolean confirm = false;
+                                        @Override
+                                        public void onDone(Object... result) {
+                                            confirm = (boolean) result[0];
+                                            if (confirm) {
+                                                mToBeDelete.add(item);
+                                                holder.mMemoryLayout.setOnClickListener(null);
+                                                deleteMemory(item);
+                                            }
+                                        }
+                                        @Override
+                                        public void onDismiss() {
+                                            if (!confirm) {
+                                                holder.mMemoryLayout.reset();
+                                            }
+                                        }
+                                    }).show(getSupportFragmentManager(), ConfirmDialog.TAG);
+                        }
+                        @Override
+                        public void onCancelled() {
+                        }
+                    });
+                    holder.mMemoryLayout.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Toast.makeText(MainActivity.this, "点击Memory:" + item.name, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
             }
         }
 
@@ -453,26 +691,31 @@ public class MainActivity extends AppCompatActivity {
 
         public class ViewHolder extends RecyclerView.ViewHolder {
             public final View mView;
+            public View mBornLayout;
             public TextView mBornView;
             public View mAgeLayout;
             public TextView mAgeView;
             public TextView mAgeDesView;
-            public View mMemoryLayout;
+            public ParticleLayout mMemoryLayout;
             public TextView mMemoryNameView;
             public TextView mMemoryDateView;
             public View mMemoryImageLayout;
             public ImageView mMemoryImage;
+            public View mFooterView;
 
             public ViewHolder(View view, int viewType) {
                 super(view);
                 mView = view;
                 if (viewType == TYPE_HEADER) {
+                    mBornLayout = view.findViewById(R.id.timeline_header_layout);
                     mBornView = (TextView) view.findViewById(R.id.timeline_header_time);
-                } else if (viewType == TYPE_NODE){
+                } else if (viewType == TYPE_FOOTER) {
+                    mFooterView = view.findViewById(R.id.timeline_footer_txt);
+                } else {
                     mAgeLayout = view.findViewById(R.id.timeline_tag_layout);
                     mAgeView = (TextView) view.findViewById(R.id.timeline_tag);
                     mAgeDesView = (TextView) view.findViewById(R.id.timeline_tag_txt);
-                    mMemoryLayout = view.findViewById(R.id.timeline_node_layout);
+                    mMemoryLayout = (ParticleLayout) view.findViewById(R.id.timeline_node_layout);
                     mMemoryNameView = (TextView) view.findViewById(R.id.timeline_node_txt);
                     mMemoryDateView = (TextView) view.findViewById(R.id.timeline_node_date);
                     mMemoryImageLayout = view.findViewById(R.id.timeline_node_img_layout);

@@ -12,8 +12,7 @@ import me.buryinmind.android.app.data.GlobalSource;
  * Created by jason on 2016/4/20.
  */
 public abstract class ApiUtil {
-//    private static final String DOMAIN = "http://127.0.0.1";
-    private static final String DOMAIN = "http://192.168.0.5:3000";
+    private static final String DOMAIN = "http://192.168.1.105:3000";
 
     /**
      * 只管接口调用的成败结果的简单回调。
@@ -103,5 +102,23 @@ public abstract class ApiUtil {
                 .setMethod(XHttpRequest.Method.GET)
                 .addStringParam("uid", uid)
                 .addStringParam("token", getLocalToken());
+    }
+
+    public static XHttpRequest addMemory(String uid, String name, long happenTime) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/add")
+                .setMethod(XHttpRequest.Method.POST)
+                .setCharset("UTF-8")
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("name", name)
+                .addStringParam("ha", String.valueOf(happenTime));
+    }
+
+    public static XHttpRequest deleteMemory(String uid, String mid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/delete")
+                .setMethod(XHttpRequest.Method.GET)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid);
     }
 }
