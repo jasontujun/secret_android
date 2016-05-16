@@ -1,7 +1,9 @@
-package me.buryinmind.android.app;
+package me.buryinmind.android.app.activity;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
@@ -18,17 +20,23 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.Priority;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.fourmob.datetimepicker.date.DatePickerDialog;
+import com.qiniu.android.http.ResponseInfo;
+import com.qiniu.android.storage.UpCompletionHandler;
+import com.qiniu.android.storage.UpProgressHandler;
+import com.qiniu.android.storage.UploadOptions;
 import com.tj.xengine.android.data.listener.XHandlerIdDataSourceListener;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
+import com.tj.xengine.android.utils.XStorageUtil;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.network.http.XAsyncHttp;
@@ -36,8 +44,10 @@ import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -45,6 +55,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+import me.buryinmind.android.app.MyApplication;
+import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.dialog.AddMemoryDialog;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
@@ -54,23 +66,31 @@ import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.uicontrol.ParticleLayout;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.CircleTransform;
+import me.buryinmind.android.app.util.FileUtils;
+import me.buryinmind.android.app.util.ImageUtil;
 import me.buryinmind.android.app.util.TimeUtil;
+import me.buryinmind.android.app.util.ViewUtil;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "BIM_MainActivity";
     public static final String TAG_DATE_PICKER = "datepicker";
+    private static final int REQUEST_CODE = 8090;
+    private static final long MAX_IMAGE_SIZE = 100 * 1024;// 图片大小上限100K
 
     private View mProgressView;
     private View mContentView;
     private Toolbar mToolBar;
     private AppBarLayout mAppBar;
     private CollapsingToolbarLayout mCollapsedLayout;
+    private ImageView mProfileBackground;
+    private ImageView mAccountHeadView;
+    private TextView mAccountNameView;
+    private TextView mAccountDesView;
     private RecyclerView mTimelineView;
     private TimelineAdapter mAdapter;
     private View mAddBtn;
     private View mBirthdayView;
-    private Button mBirthdayBtn;
 
     private boolean mListTop = true;
     private boolean mCollapsed = false;
@@ -91,24 +111,13 @@ public class MainActivity extends AppCompatActivity {
         mTimelineView = (RecyclerView) findViewById(R.id.timeline_list);
         mAddBtn = findViewById(R.id.timeline_add_btn);
         mBirthdayView = findViewById(R.id.timeline_birthday_layout);
-        mBirthdayBtn = (Button) findViewById(R.id.timeline_birthday_btn);
-        ImageView mProfileBackground = (ImageView) findViewById(R.id.account_profile_bg);
-        ImageView mAccountHeadView = (ImageView) findViewById(R.id.account_head_img);
-        TextView mAccountNameView = (TextView) findViewById(R.id.account_name_txt);
-        TextView mAccountDesView = (TextView) findViewById(R.id.account_des_txt);
+        mProfileBackground = (ImageView) findViewById(R.id.account_profile_bg);
+        mAccountHeadView = (ImageView) findViewById(R.id.account_head_img);
+        mAccountNameView = (TextView) findViewById(R.id.account_name_txt);
+        mAccountDesView = (TextView) findViewById(R.id.account_des_txt);
 
+        // init AppBarLayout expand and collapse
         setSupportActionBar(mToolBar);
-        mToolBar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                XLog.d(TAG, "toolbar.onClick");
-                if (mCollapsed) {
-                    mAppBar.setExpanded(true, true);
-                } else {
-                    mAppBar.setExpanded(false, true);
-                }
-            }
-        });
         mAppBar.addOnOffsetChangedListener(new AppBarLayout.OnOffsetChangedListener() {
             @Override
             public void onOffsetChanged(AppBarLayout appBarLayout, int verticalOffset) {
@@ -126,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
             }
+
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
@@ -144,53 +154,20 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // init user profile
-        GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-        final User user = source.getUser();
-        if (user == null) {
-            return;// TODO erro message
-        }
-        Glide.with(MainActivity.this)
-                .load(R.drawable.test)
-                .into(mProfileBackground);
-        Glide.with(MainActivity.this)
-                .load(R.drawable.test)
-                .transform(new CircleTransform(MainActivity.this))
-                .placeholder(R.drawable.headicon_active)
-                .into(mAccountHeadView);
-        mAccountNameView.setText(user.name);
-        mAccountDesView.setText(XStringUtil.list2String(user.descriptions, " ,"));
-
-        // init add button
+        // init add btn
         mAddBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!mAddingMemory) {
-                    mAddingMemory = true;
-                    Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_start);
-                    animation.setFillAfter(true);
-                    mAddBtn.startAnimation(animation);
-                    AddMemoryDialog.newInstance(new DialogListener() {
-                        @Override
-                        public void onDone(Object... result) {
-                            String name = (String) result[0];
-                            Calendar date = (Calendar) result[1];
-                            // 统一改成GMT时区,再上传服务器
-                            date.setTimeZone(TimeZone.getTimeZone("GMT"));
-                            addMemory(name, date.getTimeInMillis());
-                        }
-
-                        @Override
-                        public void onDismiss() {
-                            mAddingMemory = false;
-                            Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_back);
-                            animation.setFillAfter(true);
-                            mAddBtn.startAnimation(animation);
-                        }
-                    }).show(getSupportFragmentManager(), AddMemoryDialog.TAG);
-                }
+                clickAddMemoryBtn(v);
             }
         });
+
+        // init user profile
+        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+        mAccountNameView.setText(user.name);
+        mAccountDesView.setText(XStringUtil.list2String(user.descriptions, ", "));
+        showProfilePicture();
 
         // register data listener
         final XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
@@ -239,31 +216,6 @@ public class MainActivity extends AppCompatActivity {
         if (user.bornTime == 0) {
             // 让用户设置出生日期,再生成时间线
             mBirthdayView.setVisibility(View.VISIBLE);
-            mBirthdayBtn.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showDatePicker(Calendar.getInstance(), new DatePickerDialog.OnDateSetListener() {
-                        @Override
-                        public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
-                            Calendar birthCal = Calendar.getInstance();
-                            birthCal.set(year, month, day);
-                            // 统一改成GMT时区,再上传服务器
-                            birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
-                            final long bornTime = birthCal.getTimeInMillis();
-                            updateBornTime(user.uid, bornTime, new ApiUtil.SimpleListener() {
-                                @Override
-                                public void onResult(boolean result) {
-                                    if (result) {
-                                        user.bornTime = bornTime;
-                                        // 生成时间线
-                                        showTimeline();
-                                    }
-                                }
-                            });
-                        }
-                    });
-                }
-            });
             mTimelineView.setVisibility(View.GONE);
             mAddBtn.setVisibility(View.GONE);
         } else {
@@ -279,21 +231,86 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-
-    private void showProgress(final boolean show) {
-        animateFadeInOut(mContentView, show);
-        animateFadeInOut(mProgressView, !show);
+    public void clickToolBar(View view) {
+        XLog.d(TAG, "toolbar.onClick");
+        if (mCollapsed) {
+            mAppBar.setExpanded(true, true);
+        } else {
+            mAppBar.setExpanded(false, true);
+        }
     }
 
-    private static void animateFadeInOut(final View view, final boolean fadeout) {
-        view.setVisibility(fadeout ? View.GONE : View.VISIBLE);
-        view.animate().setDuration(200).alpha(
-                fadeout ? 0 : 1).setListener(new AnimatorListenerAdapter() {
+    public void clickHead(View view) {
+        // 选择图片，并上传
+        Intent target = FileUtils.createGetContentIntent();
+        Intent intent = Intent.createChooser(target, this.getString(R.string.info_choose_head));
+        try {
+            startActivityForResult(intent, REQUEST_CODE);
+        } catch (ActivityNotFoundException ex) {
+            Toast.makeText(this, getString(R.string.error_select_picture),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void clickDes(View view) {
+        // 修改描述
+    }
+
+    public void clickBirthBtn(View view) {
+        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+        showDatePicker(Calendar.getInstance(), new DatePickerDialog.OnDateSetListener() {
             @Override
-            public void onAnimationEnd(Animator animation) {
-                view.setVisibility(fadeout ? View.GONE : View.VISIBLE);
+            public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
+                Calendar birthCal = Calendar.getInstance();
+                birthCal.set(year, month, day);
+                // 统一改成GMT时区,再上传服务器
+                birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
+                final long bornTime = birthCal.getTimeInMillis();
+                updateBornTime(user.uid, bornTime, new ApiUtil.SimpleListener() {
+                    @Override
+                    public void onResult(boolean result) {
+                        if (result) {
+                            user.bornTime = bornTime;
+                            // 生成时间线
+                            showTimeline();
+                        }
+                    }
+                });
             }
         });
+    }
+
+    public void clickAddMemoryBtn(View view) {
+        if (!mAddingMemory) {
+            mAddingMemory = true;
+            Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_start);
+            animation.setFillAfter(true);
+            mAddBtn.startAnimation(animation);
+            AddMemoryDialog.newInstance(new DialogListener() {
+                @Override
+                public void onDone(Object... result) {
+                    String name = (String) result[0];
+                    Calendar date = (Calendar) result[1];
+                    // 统一改成GMT时区,再上传服务器
+                    date.setTimeZone(TimeZone.getTimeZone("GMT"));
+                    addMemory(name, date.getTimeInMillis());
+                }
+
+                @Override
+                public void onDismiss() {
+                    mAddingMemory = false;
+                    Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_back);
+                    animation.setFillAfter(true);
+                    mAddBtn.startAnimation(animation);
+                }
+            }).show(getSupportFragmentManager(), AddMemoryDialog.TAG);
+        }
+    }
+
+    private void showProgress(final boolean show) {
+        ViewUtil.animateFadeInOut(mContentView, show);
+        ViewUtil.animateFadeInOut(mProgressView, !show);
     }
 
     private DialogFragment showDatePicker(Calendar initCal, DatePickerDialog.OnDateSetListener listener) {
@@ -306,6 +323,29 @@ public class MainActivity extends AppCompatActivity {
         datePickerDialog.setYearRange(1902, Calendar.getInstance().get(Calendar.YEAR));
         datePickerDialog.show(getSupportFragmentManager(), TAG_DATE_PICKER);
         return datePickerDialog;
+    }
+
+
+    private void showProfilePicture() {
+        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+        showProfilePicture(ApiUtil.getHeadUrl(user.uid));
+    }
+
+    private void showProfilePicture(String url) {
+        XLog.d(TAG, "showProfilePicture(). head_url=" + url);
+        Glide.with(MainActivity.this)
+                .load(url)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .priority(Priority.HIGH)
+                .error(R.drawable.profile_default)
+                .into(mProfileBackground);
+        Glide.with(MainActivity.this)
+                .load(url)
+                .dontAnimate()
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .error(R.drawable.headicon_default)
+                .into(mAccountHeadView);
     }
 
     private void showTimeline() {
@@ -474,6 +514,122 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    private void uploadHeadPicture(final String filePath) {
+        //从业务服务器获取上传凭证
+        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.getHeadToken(user.uid),
+                new XJsonObjectHandler(),
+                new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
+                        try {
+                            final String token = jsonObject.getString("up");
+                            // 真正开始上传
+                            MyApplication.getUploadManager().put(filePath, user.uid, token,
+                                    new UpCompletionHandler() {
+                                        @Override
+                                        public void complete(String key, ResponseInfo info, JSONObject response) {
+                                            XLog.d(TAG, "upload complete! " + info.toString());
+                                            if (info.isOK()) {
+                                                XLog.d(TAG, "upload success!");
+                                                MyApplication.updateImageTimestamp();// 更新图片时间戳
+                                                showProfilePicture(filePath);
+                                            } else {
+                                                Toast.makeText(MainActivity.this, R.string.error_upload_picture,
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    },
+                                    new UploadOptions(null, null, false,
+                                            new UpProgressHandler() {
+                                                public void progress(String key, double percent) {
+                                                    XLog.d(TAG, "progress. " + key + ": " + percent);
+                                                }
+                                            }, null));
+                        } catch (JSONException e) {
+                            Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case REQUEST_CODE:
+                // If the file selection was successful
+                if (resultCode == RESULT_OK) {
+                    if (data != null) {
+                        // Get the URI of the selected file
+                        final Uri uri = data.getData();
+                        try {
+                            // Get the file path from the URI
+                            final String path = FileUtils.getPath(this, uri);
+                            if (path == null) {
+                                Toast.makeText(this, getString(R.string.error_select_picture),
+                                        Toast.LENGTH_LONG).show();
+                            } else {
+                                File file = new File(path);
+                                long fileSize = file.length();
+                                if (fileSize > MAX_IMAGE_SIZE) {
+                                    // 先进行压缩再上传
+                                    XLog.d(TAG, "need compress! size=" + fileSize);
+                                    new AsyncTask<Void, Void, String>() {
+                                        @Override
+                                        protected String doInBackground(Void... params) {
+                                            File dir = getCacheDir();
+                                            if (dir != null && dir.exists() &&
+                                                    !XStorageUtil.isFull(dir.getAbsolutePath(), MAX_IMAGE_SIZE)) {
+                                                File tmpFile = new File(dir, "tmp_" + System.currentTimeMillis() + ".jpg");
+                                                if (ImageUtil.compress(MainActivity.this, path, tmpFile.getAbsolutePath(), MAX_IMAGE_SIZE)) {
+                                                    XLog.d(TAG, "head picture compress success!");
+                                                    return tmpFile.getAbsolutePath();
+                                                } else {
+                                                    XLog.d(TAG, "head picture compress failed!");
+                                                    return null;
+                                                }
+                                            }
+                                            return null;
+                                        }
+                                        @Override
+                                        protected void onPostExecute(String result) {
+                                            if (!XStringUtil.isEmpty(result)) {
+                                                uploadHeadPicture(result);
+                                            } else {
+                                                Toast.makeText(MainActivity.this, getString(R.string.error_select_picture),
+                                                        Toast.LENGTH_LONG).show();
+                                            }
+                                        }
+                                    }.execute();
+                                } else {
+                                    // 大小没超过上限，直接上传
+                                    XLog.d(TAG, "no need compress! size=" + fileSize);
+                                    uploadHeadPicture(path);
+                                }
+                            }
+                        } catch (Exception e) {
+                            Toast.makeText(this, getString(R.string.error_select_picture),
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+                break;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
 
     private class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHolder> {
 
@@ -618,7 +774,7 @@ public class MainActivity extends AppCompatActivity {
                 });
             } else {
                 final Memory item = mValues.get(position - 1);
-                if (mAges.get(item.age).equals(item)) {
+                if (item.age > 0 && mAges.get(item.age).equals(item)) {
                     holder.mAgeView.setText(String.valueOf(item.age));
                     holder.mAgeLayout.setVisibility(View.VISIBLE);
                 }else {

@@ -15,6 +15,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
@@ -67,6 +69,13 @@ public class AnswerAccountFragment extends Fragment {
         Button checkAnswerBtn = (Button) rootView.findViewById(R.id.check_answer_btn);
 
         if (mGift != null) {
+            Glide.with(getActivity())
+                    .load(ApiUtil.getHeadUrl(mGift.senderId))
+                    .dontAnimate()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.headicon_active)
+                    .error(R.drawable.headicon_active)
+                    .into(friendHeadView);
             friendNameView.setText(mGift.senderName);
             accountNameView.setText(mGift.receiverName);
             accountDesView.setText(XStringUtil.list2String(mGift.receiverDescription, " ,"));

@@ -12,13 +12,18 @@ import me.buryinmind.android.app.data.GlobalSource;
  * Created by jason on 2016/4/20.
  */
 public abstract class ApiUtil {
-    private static final String DOMAIN = "http://192.168.1.105:3000";
+    private static final String DOMAIN = "http://192.168.1.104:3000";
+    private static final String  HEAD_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
 
     /**
      * 只管接口调用的成败结果的简单回调。
      */
-    public static interface SimpleListener {
+    public interface SimpleListener {
         void onResult(boolean result);
+    }
+
+    public static String getHeadUrl(String uid) {
+        return HEAD_DOMAIN + "/" + uid + "?_=" + MyApplication.getImageTimestamp();
     }
 
     public static XHttpRequest searchSeedUser(String name, List<String> des) {
@@ -95,6 +100,13 @@ public abstract class ApiUtil {
                 .addStringParam("uid", uid)
                 .addStringParam("token", getLocalToken())
                 .addStringParam("btime", String.valueOf(bornTime));
+    }
+
+    public static XHttpRequest getHeadToken(String uid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/users/head/uptoken")
+                .setMethod(XHttpRequest.Method.GET)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken());
     }
 
     public static XHttpRequest getMemoryList(String uid) {

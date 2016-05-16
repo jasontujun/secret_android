@@ -22,7 +22,7 @@ import com.tj.xengine.core.utils.XStringUtil;
 
 import java.util.Calendar;
 
-import me.buryinmind.android.app.MainActivity;
+import me.buryinmind.android.app.activity.MainActivity;
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.data.GlobalSource;

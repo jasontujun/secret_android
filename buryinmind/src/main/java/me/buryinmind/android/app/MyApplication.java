@@ -2,6 +2,7 @@ package me.buryinmind.android.app;
 
 import android.app.Application;
 
+import com.qiniu.android.storage.UploadManager;
 import com.tj.xengine.android.db.XDatabase;
 import com.tj.xengine.android.network.http.XAsyncHttpClient;
 import com.tj.xengine.android.network.http.java.XJavaHttpClient;
@@ -31,6 +32,8 @@ public class MyApplication extends Application {
 
     private static XAsyncHttp mAsyncHttp;
     private static XHttp mHttp;
+    private static UploadManager mUploadManager;
+    private static long mImageTimestamp;
 
     @Override
     public void onCreate() {
@@ -42,6 +45,7 @@ public class MyApplication extends Application {
                 .setUserAgent("BuryInMind_Android")
                 .build());
         mAsyncHttp = new XAsyncHttpClient(mHttp);
+        mUploadManager = new UploadManager();
 
         // 初始化数据库
         XDatabase.getInstance().init(getApplicationContext(), "buryinmind", 1);
@@ -59,5 +63,17 @@ public class MyApplication extends Application {
 
     public static XAsyncHttp getAsyncHttp() {
         return mAsyncHttp;
+    }
+
+    public static UploadManager getUploadManager() {
+        return mUploadManager;
+    }
+
+    public static long getImageTimestamp() {
+        return mImageTimestamp;
+    }
+
+    public static void updateImageTimestamp() {
+        mImageTimestamp = System.currentTimeMillis();
     }
 }

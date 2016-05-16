@@ -1,7 +1,5 @@
-package me.buryinmind.android.app;
+package me.buryinmind.android.app.activity;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
@@ -26,6 +24,8 @@ import org.json.JSONObject;
 import java.io.Serializable;
 import java.util.List;
 
+import me.buryinmind.android.app.MyApplication;
+import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.fragment.ActivateAccountFragment;
 import me.buryinmind.android.app.fragment.AnswerAccountFragment;
@@ -36,6 +36,7 @@ import me.buryinmind.android.app.fragment.SearchAccountFragment;
 import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
+import me.buryinmind.android.app.util.ViewUtil;
 
 
 /**
@@ -422,19 +423,8 @@ public class LoginActivity extends AppCompatActivity {
 
 
     private void showProgress(final boolean show) {
-        animateFadeInOut(mLoginFormView, show);
-        animateFadeInOut(mProgressView, !show);
-    }
-
-    private static void animateFadeInOut(final View view, final boolean fadeout) {
-        view.setVisibility(fadeout ? View.GONE : View.VISIBLE);
-        view.animate().setDuration(200).alpha(
-                fadeout ? 0 : 1).setListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                view.setVisibility(fadeout ? View.GONE : View.VISIBLE);
-            }
-        });
+        ViewUtil.animateFadeInOut(mLoginFormView, show);
+        ViewUtil.animateFadeInOut(mProgressView, !show);
     }
 
     private void checkTokenLogin(String userId, String token) {

@@ -19,7 +19,7 @@
     <android.support.design.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context="me.buryinmind.android.app.MainActivity">
+        tools:context=".activity.MainActivity">
 
         <android.support.design.widget.AppBarLayout
             android:id="@+id/app_bar"
@@ -48,6 +48,7 @@
                     android:id="@+id/toolbar"
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
+                    android:onClick="clickToolBar"
                     app:layout_collapseMode="pin"
                     app:popupTheme="@style/AppTheme.AppBarOverlay" />
 
@@ -94,7 +95,8 @@
                     android:padding="20dp"
                     android:textSize="@dimen/text_size_small"
                     android:textColor="@color/gray"
-                    android:text="@string/info_set_birthday_btn"/>
+                    android:text="@string/info_set_birthday_btn"
+                    android:onClick="clickBirthBtn"/>
             </LinearLayout>
         </RelativeLayout>
         <!--</android.support.v4.widget.SwipeRefreshLayout>-->

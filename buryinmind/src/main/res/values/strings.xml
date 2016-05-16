@@ -31,6 +31,8 @@
     <string name="error_inconsistent_password">The two passwords are inconsistent</string>
     <string name="error_login_fail">Sorry, Password is not correct!</string>
     <string name="error_invalid_date">Selected date is incorrect!</string>
+    <string name="error_select_picture">Sorry, Cannot select picture!</string>
+    <string name="error_upload_picture">Sorry, upload picture failed!</string>
 
     <string name="info_press_back_again">Press back again if exit</string>
     <string name="info_question">Question:</string>
@@ -48,5 +50,6 @@
     <string name="info_add_memory">Add a new memory</string>
     <string name="info_add_memory_date">When I was %1$d</string>
     <string name="info_delete_memory">Sure to delete the memory "%2$s" when you were %1$d?</string>
+    <string name="info_choose_head">Please select a picture as your head</string>
 
 </resources>

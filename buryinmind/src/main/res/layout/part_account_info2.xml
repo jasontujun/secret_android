@@ -1,18 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="10dp">
-    <ImageView
+    <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/account_head_img"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:scaleType="fitXY"
-        tools:src="@drawable/test"/>
+        android:layout_width="@dimen/head_profile_big_size"
+        android:layout_height="@dimen/head_profile_big_size"
+        android:onClick="clickHead"
+        android:src="@drawable/headicon_default"
+        app:civ_border_width="2dp"
+        app:civ_border_color="@color/darkGray"/>
+    <!--<ImageView-->
+        <!--android:id="@+id/account_head_img"-->
+        <!--android:layout_width="60dp"-->
+        <!--android:layout_height="60dp"-->
+        <!--android:scaleType="fitXY"-->
+        <!--android:onClick="clickHead"-->
+        <!--tools:src="@drawable/profile_default"/>-->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_marginLeft="10dp"
@@ -37,6 +47,8 @@
             android:textSize="@dimen/text_size_small"
             android:textColor="@color/gray"
             android:maxLines="3"
+            android:onClick="clickDes"
+            android:background="@drawable/bg_transparent_gray"
             tools:text="dirty boy, shenzhen, NJU"/>
     </LinearLayout>
 </RelativeLayout>

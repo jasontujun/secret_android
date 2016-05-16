@@ -15,6 +15,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.network.http.XAsyncHttp;
@@ -73,13 +75,19 @@ public class LoginAccountFragment extends Fragment {
         mPasswordInputView = (EditText) rootView.findViewById(R.id.password_input);
         Button loginButton = (Button) rootView.findViewById(R.id.login_btn);
 
-        accountHeadView.setImageResource(R.drawable.headicon_active);
         if (!XStringUtil.isEmpty(userName)) {
             accountNameView.setText(userName);
         }
         if (userDescription != null) {
             accountDesView.setText(XStringUtil.list2String(userDescription, " ,"));
         }
+        Glide.with(getActivity())
+                .load(ApiUtil.getHeadUrl(userId))
+                .dontAnimate()
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.headicon_active)
+                .error(R.drawable.headicon_active)
+                .into(accountHeadView);
         // 设置键盘Enter键动作响应
         mPasswordInputView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override

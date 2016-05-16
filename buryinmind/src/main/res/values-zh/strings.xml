@@ -31,6 +31,8 @@
     <string name="error_inconsistent_password">两次输入密码不一致</string>
     <string name="error_login_fail">抱歉，密码不正确!</string>
     <string name="error_invalid_date">所选日期不正确!</string>
+    <string name="error_select_picture">抱歉，无法选择图片!</string>
+    <string name="error_upload_picture">抱歉，图片上传失败!</string>
 
     <string name="info_press_back_again">再按一次退出程序</string>
     <string name="info_question">对你的问题:</string>
@@ -45,4 +47,5 @@
     <string name="info_add_memory">添加回忆</string>
     <string name="info_add_memory_date">%1$d岁那年</string>
     <string name="info_delete_memory">确定抹去%1$d岁的这段回忆“%2$s”?</string>
+    <string name="info_choose_head">请选择一张图片作为头像</string>
 </resources>

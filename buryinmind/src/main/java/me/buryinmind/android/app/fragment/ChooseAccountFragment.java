@@ -10,6 +10,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.tj.xengine.core.utils.XStringUtil;
 
 import java.util.ArrayList;
@@ -18,6 +20,7 @@ import java.util.List;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
+import me.buryinmind.android.app.util.ApiUtil;
 
 /**
  * Created by jasontujun on 2016/4/20.
@@ -70,6 +73,7 @@ public class ChooseAccountFragment extends Fragment {
         View accountLayout = rootView.findViewById(R.id.account_info_layout);
         TextView mAccountListPromptView = (TextView) rootView.findViewById(R.id.account_list_prompt_txt);
         RecyclerView mAccountListView = (RecyclerView) rootView.findViewById(R.id.account_list);
+        ImageView accountHeadView = (ImageView) rootView.findViewById(R.id.account_head_img);
         TextView accountNameView = (TextView) rootView.findViewById(R.id.account_name_txt);
         TextView accountDesView = (TextView) rootView.findViewById(R.id.account_des_txt);
         Button backButton = (Button) rootView.findViewById(R.id.back_btn);
@@ -87,16 +91,23 @@ public class ChooseAccountFragment extends Fragment {
                                 mListener.onBack();
                         }
                     });
-                    break;
+                } else {
+                    mAccountListView.setAdapter(new UserAdapter(accountList));
+                    mAccountListPromptView.setText(R.string.info_choose_account);
                 }
-                mAccountListView.setAdapter(new UserAdapter(accountList));
-                mAccountListPromptView.setText(R.string.info_choose_account);
                 break;
             case TYPE_GIFT_LIST:
                 if (chooseUser != null) {
                     accountLayout.setVisibility(View.VISIBLE);
                     accountNameView.setText(chooseUser.name);
                     accountDesView.setVisibility(View.GONE);
+                    Glide.with(getActivity())
+                            .load(ApiUtil.getHeadUrl(chooseUser.uid))
+                            .dontAnimate()
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .placeholder(R.drawable.headicon_default)
+                            .error(R.drawable.headicon_default)
+                            .into(accountHeadView);
                 } else {
                     accountLayout.setVisibility(View.GONE);
                 }
@@ -140,6 +151,13 @@ public class ChooseAccountFragment extends Fragment {
             holder.mHeadView.setImageResource(R.drawable.headicon_active);
             holder.mNameView.setText(holder.mItem.name);
             holder.mDescriptionView.setText(XStringUtil.list2String(holder.mItem.descriptions, ", "));
+            Glide.with(getActivity())
+                    .load(ApiUtil.getHeadUrl(holder.mItem.uid))
+                    .dontAnimate()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.headicon_default)
+                    .error(R.drawable.headicon_default)
+                    .into(holder.mHeadView);
 
             holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -191,7 +209,6 @@ public class ChooseAccountFragment extends Fragment {
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
             holder.mItem = mValues.get(position);
-            holder.mHeadView.setImageResource(R.drawable.headicon_seed);
             holder.mNameView.setText(holder.mItem.senderName);
             holder.mDescriptionView.setVisibility(View.GONE);
             holder.mAboutLayout.setVisibility(View.VISIBLE);
@@ -199,6 +216,13 @@ public class ChooseAccountFragment extends Fragment {
             holder.mQuestionLayout.setVisibility(View.VISIBLE);
             holder.mQuestionView.setText(holder.mItem.question);
 
+            Glide.with(getActivity())
+                    .load(ApiUtil.getHeadUrl(holder.mItem.receiverId))
+                    .dontAnimate()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.headicon_default)
+                    .error(R.drawable.headicon_default)
+                    .into(holder.mHeadView);
             holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
