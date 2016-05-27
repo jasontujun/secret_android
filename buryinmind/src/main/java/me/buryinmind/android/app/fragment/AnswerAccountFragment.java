@@ -17,17 +17,13 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
-import org.json.JSONObject;
-
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.MemoryGift;
-import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
 
 /**
@@ -70,7 +66,7 @@ public class AnswerAccountFragment extends Fragment {
 
         if (mGift != null) {
             Glide.with(getActivity())
-                    .load(ApiUtil.getHeadUrl(mGift.senderId))
+                    .load(ApiUtil.getIdUrl(mGift.senderId))
                     .dontAnimate()
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.headicon_active)

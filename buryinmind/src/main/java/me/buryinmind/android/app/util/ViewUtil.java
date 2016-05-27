@@ -7,7 +7,7 @@ import android.view.View;
 /**
  * Created by jasontujun on 2016/5/15.
  */
-public class ViewUtil {
+public abstract class ViewUtil {
 
     public static void animateFadeInOut(final View view, final boolean fadeout) {
         view.setVisibility(fadeout ? View.GONE : View.VISIBLE);

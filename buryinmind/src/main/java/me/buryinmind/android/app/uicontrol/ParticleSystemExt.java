@@ -77,19 +77,29 @@ public class ParticleSystemExt extends ParticleSystem {
     }
 
     /**
-     * 竖直方向上产生
-     *
-     * @param emitterX
+     * 水平方向上产生粒子效果
      */
-    public void updateEmitVerticalLine(int emitterX, int emitterMinY, int emitterMaxY) {
-        configureEmiter(emitterX, emitterMinY, emitterMaxY);
+    public void updateEmitHorizontalLine(int emitterY, int emitterMinX, int emitterMaxX) {
+        // We configure the emitter based on the window location to fix the offset of action bar if present
+        try {
+            int[] ploint = (int[]) pl.get(this);
+            int y = emitterY - ploint[1];
+            exmin.setInt(this, emitterMinX);
+            exmax.setInt(this, emitterMaxX);
+            eymin.setInt(this, y);
+            eymax.setInt(this, y);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void configureEmiter(int emitterX, int emitterMinY, int emitterMaxY) {
-        // We configure the emiter based on the window location to fix the offset of action bar if present
+    /**
+     * 竖直方向上产生粒子效果
+     */
+    public void updateEmitVerticalLine(int emitterX, int emitterMinY, int emitterMaxY) {
+        // We configure the emitter based on the window location to fix the offset of action bar if present
         try {
-            Object plobj = pl.get(this);
-            int[] ploint = (int[]) plobj;
+            int[] ploint = (int[]) pl.get(this);
             int x = emitterX - ploint[0];
             exmin.setInt(this, x);
             exmax.setInt(this, x);

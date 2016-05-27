@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/img_grid"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottom_layout"
+        tools:listitem="@layout/item_image_grid">
+    </android.support.v7.widget.RecyclerView>
+
+    <RelativeLayout
+        android:id="@+id/bottom_layout"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/transparentLightGray"
+        android:clickable="true">
+
+        <TextView
+            android:id="@+id/choose_dir_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:padding="10dp"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@android:color/white"
+            android:background="?attr/selectableItemBackground"
+            tools:text="@string/info_all_image"/>
+
+        <TextView
+            android:id="@+id/choose_image_done_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:padding="10dp"
+            android:gravity="center"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@android:color/white"
+            android:background="?attr/selectableItemBackground"
+            tools:text="完成 (1张)"/>
+    </RelativeLayout>
+    <RelativeLayout
+        android:id="@+id/toolbar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <android.support.v7.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/transparentDarkGray"
+            app:titleTextColor="@color/white"
+            app:navigationIcon="@drawable/icon_arrow_back_white"
+            app:popupTheme="@style/AppTheme.AppBarOverlay" />
+        <TextView
+            android:id="@+id/toolbar_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:maxWidth="250dp"
+            android:singleLine="true"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_size_middle"
+            tools:text="title"/>
+    </RelativeLayout>
+</RelativeLayout>

@@ -82,7 +82,7 @@ public class LoginAccountFragment extends Fragment {
             accountDesView.setText(XStringUtil.list2String(userDescription, " ,"));
         }
         Glide.with(getActivity())
-                .load(ApiUtil.getHeadUrl(userId))
+                .load(ApiUtil.getIdUrl(userId))
                 .dontAnimate()
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.headicon_active)

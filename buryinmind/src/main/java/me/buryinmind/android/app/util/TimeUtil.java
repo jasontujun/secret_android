@@ -8,7 +8,7 @@ import java.util.TimeZone;
 /**
  * Created by jasontujun on 2016/4/28.
  */
-public class TimeUtil {
+public abstract class TimeUtil {
 
     public static Calendar getCalendar(long timeInMillis) {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));

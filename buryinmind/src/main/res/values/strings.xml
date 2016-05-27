@@ -15,11 +15,12 @@
     <string name="button_check_answer">Confirm Friend</string>
     <string name="button_activate">Join In</string>
     <string name="button_back">Back</string>
-    <string name="button_settings">Settings</string>
     <string name="button_set_date">When</string>
     <string name="button_done">Done</string>
     <string name="button_yes">Yes</string>
     <string name="button_no">No</string>
+    <string name="button_settings">Settings</string>
+    <string name="button_add_secret">Add</string>
 
     <string name="error_network">something wrong with your network</string>
     <string name="error_exception">exception!</string>
@@ -50,6 +51,12 @@
     <string name="info_add_memory">Add a new memory</string>
     <string name="info_add_memory_date">When I was %1$d</string>
     <string name="info_delete_memory">Sure to delete the memory "%2$s" when you were %1$d?</string>
+    <string name="info_delete_secret">Sure to delete the secret of this memory?</string>
     <string name="info_choose_head">Please select a picture as your head</string>
+    <string name="info_choose_image">Select Images</string>
+    <string name="info_choose_image_done">Done (%1$dPictures)</string>
+    <string name="info_all_image">All pictures</string>
+    <string name="info_memory_author">From:</string>
+    <string name="info_memory_time">At %1$s</string>
 
 </resources>

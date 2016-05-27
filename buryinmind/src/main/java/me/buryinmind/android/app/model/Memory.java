@@ -2,7 +2,6 @@ package me.buryinmind.android.app.model;
 
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.annotation.XId;
-import com.tj.xengine.core.utils.XStringUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,7 +21,23 @@ import me.buryinmind.android.app.util.TimeUtil;
  */
 public class Memory {
 
-    public static final Comparator<Memory> comparator = new Comp();
+    public static final Comparator<Memory> comparator = new Comparator<Memory>() {
+        @Override
+        public int compare(Memory lhs, Memory rhs) {
+            if (lhs.happenTime < rhs.happenTime){
+                return -1;
+            } else if (lhs.happenTime > rhs.happenTime){
+                return 1;
+            } else {
+                if (lhs.createTime < rhs.createTime)
+                    return -1;
+                else if (lhs.createTime > rhs.createTime)
+                    return 1;
+                else
+                    return 0;
+            }
+        }
+    };
 
     @XId
     public String mid;
@@ -41,17 +56,23 @@ public class Memory {
 
     public long createTime;
 
+    public boolean editable;
+
     public List<Secret> secrets = new ArrayList<Secret>();
 
-    public int age;// 临时属性，计算得出
+    public int age;// 临时属性，计算得出发生时的年龄
 
 
-    public void resetAge() {
+    public void calculateAge() {
         GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
         final User user = source.getUser();
         if (user != null) {
-            this.age = TimeUtil.calculateAge(user.bornTime, this.happenTime);
+            calculateAge(user.bornTime);
         }
+    }
+
+    public void calculateAge(long userBornTime) {
+        this.age = TimeUtil.calculateAge(userBornTime, this.happenTime);
     }
 
     public static Memory fromJson(JSONObject jo) {
@@ -67,7 +88,8 @@ public class Memory {
             memory.ownerName = jo.getString("owner_name");
             memory.happenTime = jo.getLong("happen_time");
             memory.createTime = jo.getLong("create_time");
-            memory.resetAge();
+            memory.editable = jo.getInt("editable") != 0;
+            memory.calculateAge();
             return memory;
         } catch (JSONException e) {
             e.printStackTrace();
@@ -92,25 +114,6 @@ public class Memory {
         } catch (JSONException e) {
             e.printStackTrace();
             return null;
-        }
-    }
-
-    private static class Comp implements Comparator<Memory> {
-
-        @Override
-        public int compare(Memory lhs, Memory rhs) {
-            if (lhs.happenTime < rhs.happenTime){
-                return -1;
-            } else if (lhs.happenTime > rhs.happenTime){
-                return 1;
-            } else {
-                if (lhs.createTime < rhs.createTime)
-                    return -1;
-                else if (lhs.createTime > rhs.createTime)
-                    return 1;
-                else
-                    return 0;
-            }
         }
     }
 }

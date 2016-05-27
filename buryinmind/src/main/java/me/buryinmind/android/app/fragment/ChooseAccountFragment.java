@@ -102,7 +102,7 @@ public class ChooseAccountFragment extends Fragment {
                     accountNameView.setText(chooseUser.name);
                     accountDesView.setVisibility(View.GONE);
                     Glide.with(getActivity())
-                            .load(ApiUtil.getHeadUrl(chooseUser.uid))
+                            .load(ApiUtil.getIdUrl(chooseUser.uid))
                             .dontAnimate()
                             .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .placeholder(R.drawable.headicon_default)
@@ -152,7 +152,7 @@ public class ChooseAccountFragment extends Fragment {
             holder.mNameView.setText(holder.mItem.name);
             holder.mDescriptionView.setText(XStringUtil.list2String(holder.mItem.descriptions, ", "));
             Glide.with(getActivity())
-                    .load(ApiUtil.getHeadUrl(holder.mItem.uid))
+                    .load(ApiUtil.getIdUrl(holder.mItem.uid))
                     .dontAnimate()
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.headicon_default)
@@ -217,7 +217,7 @@ public class ChooseAccountFragment extends Fragment {
             holder.mQuestionView.setText(holder.mItem.question);
 
             Glide.with(getActivity())
-                    .load(ApiUtil.getHeadUrl(holder.mItem.receiverId))
+                    .load(ApiUtil.getIdUrl(holder.mItem.receiverId))
                     .dontAnimate()
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.headicon_default)

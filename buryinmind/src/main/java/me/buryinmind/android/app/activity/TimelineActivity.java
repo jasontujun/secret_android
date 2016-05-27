@@ -57,6 +57,7 @@ import java.util.TimeZone;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.controller.ResultListener;
 import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.dialog.AddMemoryDialog;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
@@ -65,17 +66,16 @@ import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.uicontrol.ParticleLayout;
 import me.buryinmind.android.app.util.ApiUtil;
-import me.buryinmind.android.app.util.CircleTransform;
 import me.buryinmind.android.app.util.FileUtils;
 import me.buryinmind.android.app.util.ImageUtil;
 import me.buryinmind.android.app.util.TimeUtil;
 import me.buryinmind.android.app.util.ViewUtil;
 
-public class MainActivity extends AppCompatActivity {
+public class TimelineActivity extends AppCompatActivity {
 
     private static final String TAG = "BIM_MainActivity";
     public static final String TAG_DATE_PICKER = "datepicker";
-    private static final int REQUEST_CODE = 8090;
+    private static final int HEADER_REQUEST_CODE = 8090;
     private static final long MAX_IMAGE_SIZE = 100 * 1024;// 图片大小上限100K
 
     private View mProgressView;
@@ -101,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_timeline);
 
         mProgressView = findViewById(R.id.loading_progress);
         mContentView = findViewById(R.id.content_layout);
@@ -167,6 +167,18 @@ public class MainActivity extends AppCompatActivity {
                 .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
         mAccountNameView.setText(user.name);
         mAccountDesView.setText(XStringUtil.list2String(user.descriptions, ", "));
+        mAccountHeadView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clickHead(v);
+            }
+        });
+        mAccountDesView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clickDes(v);
+            }
+        });
         showProfilePicture();
 
         // register data listener
@@ -227,12 +239,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu_main, menu);
+        inflater.inflate(R.menu.menu_timeline, menu);
         return true;
     }
 
     public void clickToolBar(View view) {
-        XLog.d(TAG, "toolbar.onClick");
         if (mCollapsed) {
             mAppBar.setExpanded(true, true);
         } else {
@@ -245,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
         Intent target = FileUtils.createGetContentIntent();
         Intent intent = Intent.createChooser(target, this.getString(R.string.info_choose_head));
         try {
-            startActivityForResult(intent, REQUEST_CODE);
+            startActivityForResult(intent, HEADER_REQUEST_CODE);
         } catch (ActivityNotFoundException ex) {
             Toast.makeText(this, getString(R.string.error_select_picture),
                     Toast.LENGTH_LONG).show();
@@ -253,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clickDes(View view) {
-        // 修改描述
+        // TODO 修改描述
     }
 
     public void clickBirthBtn(View view) {
@@ -267,9 +278,9 @@ public class MainActivity extends AppCompatActivity {
                 // 统一改成GMT时区,再上传服务器
                 birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
                 final long bornTime = birthCal.getTimeInMillis();
-                updateBornTime(user.uid, bornTime, new ApiUtil.SimpleListener() {
+                updateBornTime(user.uid, bornTime, new ResultListener() {
                     @Override
-                    public void onResult(boolean result) {
+                    public void onResult(boolean result, Object data) {
                         if (result) {
                             user.bornTime = bornTime;
                             // 生成时间线
@@ -284,7 +295,7 @@ public class MainActivity extends AppCompatActivity {
     public void clickAddMemoryBtn(View view) {
         if (!mAddingMemory) {
             mAddingMemory = true;
-            Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_start);
+            Animation animation = AnimationUtils.loadAnimation(TimelineActivity.this, R.anim.rotate_start);
             animation.setFillAfter(true);
             mAddBtn.startAnimation(animation);
             AddMemoryDialog.newInstance(new DialogListener() {
@@ -300,7 +311,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onDismiss() {
                     mAddingMemory = false;
-                    Animation animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_back);
+                    Animation animation = AnimationUtils.loadAnimation(TimelineActivity.this, R.anim.rotate_back);
                     animation.setFillAfter(true);
                     mAddBtn.startAnimation(animation);
                 }
@@ -329,18 +340,18 @@ public class MainActivity extends AppCompatActivity {
     private void showProfilePicture() {
         final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
                 .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        showProfilePicture(ApiUtil.getHeadUrl(user.uid));
+        showProfilePicture(ApiUtil.getIdUrl(user.uid));
     }
 
     private void showProfilePicture(String url) {
         XLog.d(TAG, "showProfilePicture(). head_url=" + url);
-        Glide.with(MainActivity.this)
+        Glide.with(TimelineActivity.this)
                 .load(url)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .priority(Priority.HIGH)
                 .error(R.drawable.profile_default)
                 .into(mProfileBackground);
-        Glide.with(MainActivity.this)
+        Glide.with(TimelineActivity.this)
                 .load(url)
                 .dontAnimate()
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
@@ -378,14 +389,14 @@ public class MainActivity extends AppCompatActivity {
                     public void onNetworkError() {
                         mWaiting = false;
                         showProgress(false);
-                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
                         showProgress(false);
-                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
@@ -414,13 +425,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
-                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
-                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
@@ -451,7 +462,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onNetworkError() {
                         XLog.d(TAG, "deleteMemory onNetworkError()! mid=" + memory.mid);
                         mWaiting = false;
-                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                         mAdapter.resetData(memory);
                     }
 
@@ -459,7 +470,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         XLog.d(TAG, "deleteMemory onFinishError()! mid=" + memory.mid);
                         mWaiting = false;
-                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         mAdapter.resetData(memory);
                     }
 
@@ -475,7 +486,7 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    private void updateBornTime(String uid, long bornTime, final ApiUtil.SimpleListener listener) {
+    private void updateBornTime(String uid, long bornTime, final ResultListener listener) {
         if (mWaiting)
             return;
         mWaiting = true;
@@ -487,9 +498,9 @@ public class MainActivity extends AppCompatActivity {
                     public void onNetworkError() {
                         mWaiting = false;
                         showProgress(false);
-                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                         if (listener != null) {
-                            listener.onResult(false);
+                            listener.onResult(false, null);
                         }
                     }
 
@@ -497,9 +508,9 @@ public class MainActivity extends AppCompatActivity {
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
                         showProgress(false);
-                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         if (listener != null) {
-                            listener.onResult(false);
+                            listener.onResult(false, null);
                         }
                     }
 
@@ -508,14 +519,14 @@ public class MainActivity extends AppCompatActivity {
                         mWaiting = false;
                         showProgress(false);
                         if (listener != null) {
-                            listener.onResult(true);
+                            listener.onResult(true, null);
                         }
                     }
                 });
     }
 
-    private void uploadHeadPicture(final String filePath) {
-        //从业务服务器获取上传凭证
+    private void uploadHeadPicture(final String filePath, final boolean needDelete) {
+        // 从业务服务器获取上传凭证
         final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
                 .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
         MyApplication.getAsyncHttp().execute(
@@ -524,12 +535,12 @@ public class MainActivity extends AppCompatActivity {
                 new XAsyncHttp.Listener<JSONObject>() {
                     @Override
                     public void onNetworkError() {
-                        Toast.makeText(MainActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
-                        Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
@@ -546,8 +557,11 @@ public class MainActivity extends AppCompatActivity {
                                                 XLog.d(TAG, "upload success!");
                                                 MyApplication.updateImageTimestamp();// 更新图片时间戳
                                                 showProfilePicture(filePath);
+                                                if (needDelete) {
+                                                    new File(filePath).deleteOnExit();
+                                                }
                                             } else {
-                                                Toast.makeText(MainActivity.this, R.string.error_upload_picture,
+                                                Toast.makeText(TimelineActivity.this, R.string.error_upload_picture,
                                                         Toast.LENGTH_SHORT).show();
                                             }
                                         }
@@ -559,7 +573,7 @@ public class MainActivity extends AppCompatActivity {
                                                 }
                                             }, null));
                         } catch (JSONException e) {
-                            Toast.makeText(MainActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -568,61 +582,59 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-            case REQUEST_CODE:
+            case HEADER_REQUEST_CODE:
                 // If the file selection was successful
-                if (resultCode == RESULT_OK) {
-                    if (data != null) {
-                        // Get the URI of the selected file
-                        final Uri uri = data.getData();
-                        try {
-                            // Get the file path from the URI
-                            final String path = FileUtils.getPath(this, uri);
-                            if (path == null) {
-                                Toast.makeText(this, getString(R.string.error_select_picture),
-                                        Toast.LENGTH_LONG).show();
-                            } else {
-                                File file = new File(path);
-                                long fileSize = file.length();
-                                if (fileSize > MAX_IMAGE_SIZE) {
-                                    // 先进行压缩再上传
-                                    XLog.d(TAG, "need compress! size=" + fileSize);
-                                    new AsyncTask<Void, Void, String>() {
-                                        @Override
-                                        protected String doInBackground(Void... params) {
-                                            File dir = getCacheDir();
-                                            if (dir != null && dir.exists() &&
-                                                    !XStorageUtil.isFull(dir.getAbsolutePath(), MAX_IMAGE_SIZE)) {
-                                                File tmpFile = new File(dir, "tmp_" + System.currentTimeMillis() + ".jpg");
-                                                if (ImageUtil.compress(MainActivity.this, path, tmpFile.getAbsolutePath(), MAX_IMAGE_SIZE)) {
-                                                    XLog.d(TAG, "head picture compress success!");
-                                                    return tmpFile.getAbsolutePath();
-                                                } else {
-                                                    XLog.d(TAG, "head picture compress failed!");
-                                                    return null;
-                                                }
-                                            }
+                if (resultCode == RESULT_OK && data != null) {
+                    // Get the URI of the selected file
+                    final Uri uri = data.getData();
+                    try {
+                        // Get the file path from the URI
+                        final String path = FileUtils.getPath(this, uri);
+                        if (path == null) {
+                            Toast.makeText(this, getString(R.string.error_select_picture),
+                                    Toast.LENGTH_LONG).show();
+                            break;
+                        }
+                        File file = new File(path);
+                        long fileSize = file.length();
+                        if (fileSize > MAX_IMAGE_SIZE) {
+                            // 先进行压缩再上传
+                            XLog.d(TAG, "need compress! size=" + fileSize);
+                            new AsyncTask<Void, Void, String>() {
+                                @Override
+                                protected String doInBackground(Void... params) {
+                                    File dir = getCacheDir();
+                                    if (dir != null && dir.exists() &&
+                                            !XStorageUtil.isFull(dir.getAbsolutePath(), MAX_IMAGE_SIZE)) {
+                                        File tmpFile = new File(dir, "tmp_" + System.currentTimeMillis() + ".jpg");
+                                        if (ImageUtil.compress(TimelineActivity.this, path, tmpFile.getAbsolutePath(), MAX_IMAGE_SIZE)) {
+                                            XLog.d(TAG, "head picture compress success!");
+                                            return tmpFile.getAbsolutePath();
+                                        } else {
+                                            XLog.d(TAG, "head picture compress failed!");
                                             return null;
                                         }
-                                        @Override
-                                        protected void onPostExecute(String result) {
-                                            if (!XStringUtil.isEmpty(result)) {
-                                                uploadHeadPicture(result);
-                                            } else {
-                                                Toast.makeText(MainActivity.this, getString(R.string.error_select_picture),
-                                                        Toast.LENGTH_LONG).show();
-                                            }
-                                        }
-                                    }.execute();
-                                } else {
-                                    // 大小没超过上限，直接上传
-                                    XLog.d(TAG, "no need compress! size=" + fileSize);
-                                    uploadHeadPicture(path);
+                                    }
+                                    return null;
                                 }
-                            }
-                        } catch (Exception e) {
-                            Toast.makeText(this, getString(R.string.error_select_picture),
-                                    Toast.LENGTH_SHORT).show();
+                                @Override
+                                protected void onPostExecute(String result) {
+                                    if (!XStringUtil.isEmpty(result)) {
+                                        uploadHeadPicture(result, true);
+                                    } else {
+                                        Toast.makeText(TimelineActivity.this, getString(R.string.error_select_picture),
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                }
+                            }.execute();
+                        } else {
+                            // 大小没超过上限，直接上传
+                            XLog.d(TAG, "no need compress! size=" + fileSize);
+                            uploadHeadPicture(path, false);
                         }
+                    } catch (Exception e) {
+                        Toast.makeText(this, getString(R.string.error_select_picture),
+                                Toast.LENGTH_SHORT).show();
                     }
                 }
                 break;
@@ -638,7 +650,7 @@ public class MainActivity extends AppCompatActivity {
         private static final int TYPE_NODE = 3;
 
         private Map<Integer, Memory> mAges;
-        private List<Memory> mValues;
+        private List<Memory> mItems;
         private List<Memory> mToBeDelete;
 
         public TimelineAdapter(List<Memory> items) {
@@ -648,7 +660,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void setData(final List<Memory> memories) {
-            mValues = memories;
+            mItems = memories;
             mToBeDelete.clear();
             mAges.clear();
             for (Memory memory : memories) {
@@ -661,7 +673,7 @@ public class MainActivity extends AppCompatActivity {
 
         public void resetData(Memory memory) {
             mToBeDelete.remove(memory);
-            int pos = mValues.indexOf(memory);
+            int pos = mItems.indexOf(memory);
             if (pos == -1) {
                 return;
             }
@@ -669,7 +681,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void addData(int pos, Memory memory) {
-            mValues.add(pos, memory);
+            mItems.add(pos, memory);
             if (!mAges.containsKey(memory.age)) {
                 mAges.put(memory.age, memory);
             } else {
@@ -680,19 +692,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             notifyItemInserted(pos + 1);
-            notifyItemRangeChanged(pos + 1, Math.min(2, mValues.size() - (pos + 1)));
+            notifyItemRangeChanged(pos + 1, Math.min(2, mItems.size() - (pos + 1)));
         }
 
         public void deleteData(Memory memory) {
-            int pos = mValues.indexOf(memory);
+            int pos = mItems.indexOf(memory);
             if (pos == -1) {
                 return;
             }
-            mValues.remove(memory);
+            mItems.remove(memory);
             mToBeDelete.remove(memory);
             if (memory.equals(mAges.get(memory.age))) {
                 boolean needRemove = true;
-                for (Memory item : mValues) {
+                for (Memory item : mItems) {
                     if (item.age == memory.age) {
                         mAges.put(item.age, item);
                         needRemove = false;
@@ -704,14 +716,14 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             notifyItemRemoved(pos + 1);
-            notifyItemRangeChanged(pos + 1, Math.min(2, mValues.size() - (pos + 1)));
+            notifyItemRangeChanged(pos + 1, Math.min(2, mItems.size() - (pos + 1)));
         }
 
         @Override
         public int getItemViewType(int position) {
             if (position == 0)
                 return TYPE_HEADER;
-            else if (position == mValues.size() + 1)
+            else if (position == mItems.size() + 1)
                 return TYPE_FOOTER;
             else
                 return TYPE_NODE;
@@ -749,9 +761,9 @@ public class MainActivity extends AppCompatActivity {
                                 // 统一改成GMT时区,再上传服务器
                                 birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
                                 final long bornTime = birthCal.getTimeInMillis();
-                                updateBornTime(user.uid, bornTime, new ApiUtil.SimpleListener() {
+                                updateBornTime(user.uid, bornTime, new ResultListener() {
                                     @Override
-                                    public void onResult(boolean result) {
+                                    public void onResult(boolean result, Object data) {
                                         if (result) {
                                             user.bornTime = bornTime;
                                             mAdapter.notifyDataSetChanged();
@@ -773,7 +785,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
             } else {
-                final Memory item = mValues.get(position - 1);
+                final Memory item = mItems.get(position - 1);
                 if (item.age > 0 && mAges.get(item.age).equals(item)) {
                     holder.mAgeView.setText(String.valueOf(item.age));
                     holder.mAgeLayout.setVisibility(View.VISIBLE);
@@ -833,7 +845,10 @@ public class MainActivity extends AppCompatActivity {
                     holder.mMemoryLayout.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            Toast.makeText(MainActivity.this, "点击Memory:" + item.name, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(TimelineActivity.this, "点击Memory:" + item.name, Toast.LENGTH_SHORT).show();
+                            Intent intent = new Intent(TimelineActivity.this, MemoryDetailActivity.class);
+                            intent.putExtra("mid", item.mid);
+                            startActivity(intent);
                         }
                     });
                 }
@@ -842,7 +857,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public int getItemCount() {
-            return mValues.size() + 2;
+            return mItems.size() + 2;
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {

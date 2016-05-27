@@ -13,6 +13,8 @@ import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttp;
 import com.tj.xengine.core.network.http.XHttpConfig;
 
+import me.buryinmind.android.app.controller.SecretImageDownloader;
+import me.buryinmind.android.app.controller.SecretImageUploader;
 import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.Secret;
@@ -34,6 +36,8 @@ public class MyApplication extends Application {
     private static XHttp mHttp;
     private static UploadManager mUploadManager;
     private static long mImageTimestamp;
+    private static SecretImageDownloader mSecretDownloader;
+    private static SecretImageUploader mSecretUploader;
 
     @Override
     public void onCreate() {
@@ -46,6 +50,9 @@ public class MyApplication extends Application {
                 .build());
         mAsyncHttp = new XAsyncHttpClient(mHttp);
         mUploadManager = new UploadManager();
+        mSecretUploader = new SecretImageUploader(this, mHttp, mUploadManager);
+        mSecretDownloader = new SecretImageDownloader(mHttp, getCacheDir().getAbsolutePath());
+
 
         // 初始化数据库
         XDatabase.getInstance().init(getApplicationContext(), "buryinmind", 1);
@@ -75,5 +82,13 @@ public class MyApplication extends Application {
 
     public static void updateImageTimestamp() {
         mImageTimestamp = System.currentTimeMillis();
+    }
+
+    public static SecretImageDownloader getSecretDownloader() {
+        return mSecretDownloader;
+    }
+
+    public static SecretImageUploader getSecretUploader() {
+        return mSecretUploader;
     }
 }

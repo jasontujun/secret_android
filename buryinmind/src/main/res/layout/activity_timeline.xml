@@ -19,7 +19,7 @@
     <android.support.design.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".activity.MainActivity">
+        tools:context=".activity.TimelineActivity">
 
         <android.support.design.widget.AppBarLayout
             android:id="@+id/app_bar"
@@ -49,6 +49,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
                     android:onClick="clickToolBar"
+                    app:logo="@drawable/logo_buryinmind_white_small"
+                    app:titleTextColor="@color/white"
                     app:layout_collapseMode="pin"
                     app:popupTheme="@style/AppTheme.AppBarOverlay" />
 
@@ -79,7 +81,8 @@
                 android:layout_centerHorizontal="true"
                 android:layout_marginTop="60dp"
                 android:padding="10dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="gone">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -110,5 +113,5 @@
         android:layout_margin="20dp"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        app:srcCompat="@drawable/btn_add"/>
+        app:srcCompat="@drawable/btn_add_black"/>
 </RelativeLayout>

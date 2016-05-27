@@ -7,23 +7,17 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.data.GlobalSource;
+import me.buryinmind.android.app.model.Secret;
 
 /**
  * Created by jason on 2016/4/20.
  */
 public abstract class ApiUtil {
     private static final String DOMAIN = "http://192.168.1.104:3000";
-    private static final String  HEAD_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
+    private static final String PUBLIC_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
 
-    /**
-     * 只管接口调用的成败结果的简单回调。
-     */
-    public interface SimpleListener {
-        void onResult(boolean result);
-    }
-
-    public static String getHeadUrl(String uid) {
-        return HEAD_DOMAIN + "/" + uid + "?_=" + MyApplication.getImageTimestamp();
+    public static String getIdUrl(String uid) {
+        return PUBLIC_DOMAIN + "/" + uid + "?_=" + MyApplication.getImageTimestamp();
     }
 
     public static XHttpRequest searchSeedUser(String name, List<String> des) {
@@ -44,6 +38,7 @@ public abstract class ApiUtil {
 
     public static XHttpRequest getSeedUserDetail(String uid) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/detail")
+                .setMethod(XHttpRequest.Method.GET)
                 .addStringParam("uid", uid);
     }
 
@@ -104,14 +99,14 @@ public abstract class ApiUtil {
 
     public static XHttpRequest getHeadToken(String uid) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/head/uptoken")
-                .setMethod(XHttpRequest.Method.GET)
+                .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", uid)
                 .addStringParam("token", getLocalToken());
     }
 
     public static XHttpRequest getMemoryList(String uid) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/memory/list")
-                .setMethod(XHttpRequest.Method.GET)
+                .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", uid)
                 .addStringParam("token", getLocalToken());
     }
@@ -128,9 +123,68 @@ public abstract class ApiUtil {
 
     public static XHttpRequest deleteMemory(String uid, String mid) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/memory/delete")
-                .setMethod(XHttpRequest.Method.GET)
+                .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", uid)
                 .addStringParam("token", getLocalToken())
                 .addStringParam("mid", mid);
+    }
+
+    public static XHttpRequest getMemoryDetail(String uid, String mid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/detail")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid);
+    }
+
+    public static XHttpRequest addSecret(String uid, String mid, Secret localSecret) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/secret/add")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid)
+                .addStringParam("size", String.valueOf(localSecret.size))
+                .addStringParam("width", String.valueOf(localSecret.width))
+                .addStringParam("height", String.valueOf(localSecret.height))
+                .addStringParam("mime", localSecret.mime);
+    }
+
+    public static XHttpRequest deleteSecret(String uid, String mid, String sid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/secret/delete")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid)
+                .addStringParam("sid", sid);
+    }
+
+    public static XHttpRequest getSecretDownloadUrl(String uid, String mid, String sid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/secret/downurl")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid)
+                .addStringParam("sid", sid);
+    }
+
+    public static XHttpRequest getSecretUploadToken(String uid, String mid, String sid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/secret/uptoken")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid)
+                .addStringParam("sid", sid);
+    }
+
+    public static XHttpRequest callbackSecretUpload(String uid, String mid, String sid,
+                                                    String key, int dfs) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/secret/callback")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", uid)
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid)
+                .addStringParam("sid", sid)
+                .addStringParam("key", key)
+                .addStringParam("dfs", String.valueOf(dfs));
     }
 }

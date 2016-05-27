@@ -28,17 +28,23 @@ public class ParticleLayout extends FrameLayout {
     private static final int COUNT_OF_PARTICLE_BITMAP = 300;
     private static final int TIME_TO_LIVE = 1000;
     private static final int TIME_TO_FADE_OUT = 200;
-    public static final float DEFAULT_START_RATIO = 0.8f;
-    public static final float DEFAULT_END_RATIO = 0.5f;
+    public static final float DEFAULT_START_RATIO = 0.2f;
+    public static final float DEFAULT_END_RATIO = 0.6f;
+    public enum Orientation {
+        FROM_LEFT,
+        FROM_RIGHT,
+        FROM_TOP,
+        FROM_BOTTOM
+    }
 
     private ViewGroup backLayout;
 
     private boolean isSwipe = false;
     private boolean isHide = false;
-    private float mStartRatio;
-    private float mEndRatio;
-    private float startX;
-    private int clipWidth = 0;
+    private Orientation mOrientation;
+    private float mStartRatio;// 从滑动方向计算，触摸开始位置的百分比
+    private float mEndRatio;// 从滑动方向计算，触摸结束位置的百分比
+    private int clipLength;
     int[] contentLocation;
     private Rect contentRect;
     private int mParticleBitmap;
@@ -57,8 +63,10 @@ public class ParticleLayout extends FrameLayout {
         super(context, attrs, defStyleAttr);
         contentRect = new Rect();
         contentLocation = new int[2];
+        clipLength = 0;
         mStartRatio = DEFAULT_START_RATIO;
         mEndRatio = DEFAULT_END_RATIO;
+        mOrientation = Orientation.FROM_RIGHT;
     }
 
 
@@ -91,11 +99,80 @@ public class ParticleLayout extends FrameLayout {
     @Override
     protected void dispatchDraw(Canvas canvas) {
         if (isHide) {
-            canvas.clipRect(0, 0, 0, getHeight());
+            canvas.clipRect(0, 0, 0, 0);
         } else {
-            canvas.clipRect(0, 0, getWidth() - clipWidth, getHeight());
+            switch (mOrientation) {
+                case FROM_LEFT:
+                    canvas.clipRect(clipLength, 0, getWidth(), getHeight());
+                    break;
+                case FROM_RIGHT:
+                    canvas.clipRect(0, 0, getWidth() - clipLength, getHeight());
+                    break;
+                case FROM_TOP:
+                    canvas.clipRect(0, clipLength, getWidth(), getHeight());
+                    break;
+                case FROM_BOTTOM:
+                    canvas.clipRect(0, 0, getWidth(), getHeight() - clipLength);
+                    break;
+            }
         }
         super.dispatchDraw(canvas);
+    }
+
+    private int getParticleGravity() {
+        switch (mOrientation) {
+            case FROM_LEFT:
+                return Gravity.LEFT;
+            case FROM_RIGHT:
+                return Gravity.RIGHT;
+            case FROM_TOP:
+                return Gravity.TOP;
+            case FROM_BOTTOM:
+                return Gravity.BOTTOM;
+        }
+        return Gravity.RIGHT;
+    }
+
+    private boolean checkStart(MotionEvent event) {
+        switch (mOrientation) {
+            case FROM_LEFT:
+                return event.getX() < contentRect.width() * mStartRatio;
+            case FROM_RIGHT:
+                return event.getX() > contentRect.width() * (1 - mStartRatio);
+            case FROM_TOP:
+                return event.getY() < contentRect.height() * mStartRatio;
+            case FROM_BOTTOM:
+                return event.getY() > contentRect.height() * (1 - mStartRatio);
+        }
+        return false;
+    }
+
+    private boolean checkEnd(MotionEvent event) {
+        switch (mOrientation) {
+            case FROM_LEFT:
+                return event.getX() > contentRect.width() * mEndRatio;
+            case FROM_RIGHT:
+                return event.getX() < contentRect.width() * (1 - mEndRatio);
+            case FROM_TOP:
+                return event.getY() > contentRect.height() * mEndRatio;
+            case FROM_BOTTOM:
+                return event.getY() < contentRect.height() * (1 - mEndRatio);
+        }
+        return false;
+    }
+
+    private int calClipLength(MotionEvent event) {
+        switch (mOrientation) {
+            case FROM_LEFT:
+                return (int) (event.getX());
+            case FROM_RIGHT:
+                return (int) (contentRect.width() - event.getX());
+            case FROM_TOP:
+                return (int) event.getY();
+            case FROM_BOTTOM:
+                return (int) (contentRect.height() - event.getY());
+        }
+        return 0;
     }
 
     @Override
@@ -106,16 +183,15 @@ public class ParticleLayout extends FrameLayout {
         }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                if (event.getX() > contentRect.width() * mStartRatio) {
+                if (checkStart(event)) {
                     isSwipe = true;
-                    startX = contentRect.width();
                     if (mParticleBitmap > 0) {
                         particleSystem = new ParticleSystemExt((Activity) getContext(),
                                 COUNT_OF_PARTICLE_BITMAP, mParticleBitmap, TIME_TO_LIVE);
                         particleSystem.setAcceleration(0.00013f, 90)
                                 .setSpeedByComponentsRange(0f, 0.3f, 0.05f, 0.3f)
                                 .setFadeOut(TIME_TO_FADE_OUT, new AccelerateInterpolator())
-                                .emitWithGravity(backLayout, Gravity.RIGHT, COUNT_OF_PARTICLE_BITMAP);
+                                .emitWithGravity(backLayout, getParticleGravity(), COUNT_OF_PARTICLE_BITMAP);
                     }
                     if (mListener != null) {
                         mListener.onStart();
@@ -123,25 +199,42 @@ public class ParticleLayout extends FrameLayout {
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
-                clipWidth = (int) (startX - event.getX());
-                if (isSwipe && clipWidth > 0) {
-                    requestLayout();
-                    int statusBarHeight = getStatusBarHeight();
-                    if (particleSystem != null) {
-                        particleSystem.updateEmitVerticalLine(contentRect.right - clipWidth,
-                                contentRect.top - statusBarHeight, contentRect.bottom - statusBarHeight);
-                    }
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                } else {
-                    if (particleSystem != null) {
-                        particleSystem.stopEmitting();
+                if (isSwipe) {
+                    clipLength = calClipLength(event);
+                    if (clipLength > 0) {
+                        requestLayout();
+                        int statusBarHeight = getStatusBarHeight();
+                        if (particleSystem != null) {
+                            switch (mOrientation) {
+                                case FROM_LEFT:
+                                    particleSystem.updateEmitVerticalLine(contentRect.left + clipLength,
+                                            contentRect.top - statusBarHeight, contentRect.bottom - statusBarHeight);
+                                    break;
+                                case FROM_RIGHT:
+                                    particleSystem.updateEmitVerticalLine(contentRect.right - clipLength,
+                                            contentRect.top - statusBarHeight, contentRect.bottom - statusBarHeight);
+                                    break;
+                                case FROM_TOP:
+                                    particleSystem.updateEmitHorizontalLine(contentRect.top + clipLength,
+                                            contentRect.left, contentRect.right);
+                                    break;
+                                case FROM_BOTTOM:
+                                    particleSystem.updateEmitHorizontalLine(contentRect.bottom - clipLength,
+                                            contentRect.left, contentRect.right);
+                                    break;
+                            }
+                        }
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    } else {
+                        if (particleSystem != null) {
+                            particleSystem.stopEmitting();
+                        }
                     }
                 }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                startX = 0;
-                clipWidth = 0;
+                clipLength = 0;
                 if (isSwipe) {
                     if (particleSystem != null) {
                         particleSystem.stopEmitting();
@@ -149,15 +242,14 @@ public class ParticleLayout extends FrameLayout {
                     }
                     invalidate();
                     getParent().requestDisallowInterceptTouchEvent(false);
-
-                    if (event.getX() < getWidth() * mEndRatio) {
+                    if (checkEnd(event)) {
                         isHide = true;
-                        // 滑动超过1/2，有效结束
+                        // 滑动超过阀值，有效结束
                         if (mListener != null) {
                             mListener.onEnd();
                         }
                     } else {
-                        // 滑动未超过1/2，无效结束
+                        // 滑动未超过阀值，无效结束
                         if (mListener != null) {
                             mListener.onCancelled();
                         }
@@ -168,7 +260,6 @@ public class ParticleLayout extends FrameLayout {
         }
 
         return isSwipe || super.onTouchEvent(event);
-
     }
 
     public void hide() {
@@ -184,6 +275,10 @@ public class ParticleLayout extends FrameLayout {
     public void setRatio(int startRatio, int endRatio) {
         mStartRatio = startRatio;
         mEndRatio = endRatio;
+    }
+
+    public void setOrientation(Orientation orientation) {
+        mOrientation = orientation;
     }
 
     public void setListener(Listener listener) {

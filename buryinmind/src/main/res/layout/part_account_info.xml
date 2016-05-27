@@ -10,7 +10,6 @@
         android:id="@+id/account_head_img"
         android:layout_width="@dimen/head_profile_middle_size"
         android:layout_height="@dimen/head_profile_middle_size"
-        android:onClick="clickHead"
         android:src="@drawable/headicon_default"
         app:civ_border_width="2dp"
         app:civ_border_color="@color/darkGray"/>
@@ -40,7 +39,6 @@
             android:textSize="@dimen/text_size_small"
             android:textColor="@color/gray"
             android:maxLines="3"
-            android:onClick="clickDes"
             tools:text="dirty boy, shenzhen, NJU"/>
     </LinearLayout>
 </RelativeLayout>

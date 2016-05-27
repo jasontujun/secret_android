@@ -29,6 +29,13 @@ public class ImageUtil {
     }
 
 
+    public static int[] getDimension(String filePath) {
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(filePath, options);
+        return new int[]{options.outWidth, options.outHeight};
+    }
+
     public static Bitmap getBitmap(Context context, String filePath) {
         WindowManager wm = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
         android.view.Display display = wm.getDefaultDisplay();

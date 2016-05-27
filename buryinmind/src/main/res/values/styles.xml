@@ -6,6 +6,7 @@
         <item name="colorPrimary">@color/darkGray</item>
         <item name="colorPrimaryDark">@color/black</item>
         <item name="colorAccent">@color/darkBlue</item>
+        <item name="android:listDivider">@drawable/divider_bg</item>
     </style>
 
 
@@ -17,5 +18,10 @@
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="anim_popup_dir">
+        <item name="android:windowEnterAnimation">@anim/slide_in</item>
+        <item name="android:windowExitAnimation">@anim/slide_out</item>
+    </style>
 
 </resources>

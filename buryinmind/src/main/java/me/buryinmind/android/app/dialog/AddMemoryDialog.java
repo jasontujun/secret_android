@@ -22,7 +22,7 @@ import com.tj.xengine.core.utils.XStringUtil;
 
 import java.util.Calendar;
 
-import me.buryinmind.android.app.activity.MainActivity;
+import me.buryinmind.android.app.activity.TimelineActivity;
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.data.GlobalSource;
@@ -139,7 +139,7 @@ public class AddMemoryDialog extends DialogFragment {
                     mDateDialog.initialize(mDateDialogListener,
                             mHappenDate.get(Calendar.YEAR), mHappenDate.get(Calendar.MONTH),
                             mHappenDate.get(Calendar.DAY_OF_MONTH), false);
-                    mDateDialog.show(getFragmentManager(), MainActivity.TAG_DATE_PICKER);
+                    mDateDialog.show(getFragmentManager(), TimelineActivity.TAG_DATE_PICKER);
                     dismiss();
                 }
             });
@@ -179,7 +179,7 @@ public class AddMemoryDialog extends DialogFragment {
             }
         } else {
             showDateDialog = true;
-            mDateDialog.show(getFragmentManager(), MainActivity.TAG_DATE_PICKER);
+            mDateDialog.show(getFragmentManager(), TimelineActivity.TAG_DATE_PICKER);
         }
         dismiss();
     }

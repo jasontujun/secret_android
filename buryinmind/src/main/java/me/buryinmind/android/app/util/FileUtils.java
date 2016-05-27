@@ -41,7 +41,7 @@ import java.util.Comparator;
  * @author paulburke (ipaulpro)
  * @version 2013-12-11
  */
-public class FileUtils {
+public abstract class FileUtils {
     public static final String MIME_TYPE_AUDIO = "audio/*";
     public static final String MIME_TYPE_TEXT = "text/*";
     public static final String MIME_TYPE_IMAGE = "image/*";

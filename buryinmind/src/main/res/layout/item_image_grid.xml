@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/item_image"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:scaleType="centerCrop"
+        tools:src="@drawable/profile_default"/>
+
+    <ImageButton
+        android:id="@+id/item_select_tip"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:clickable="false"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginRight="3dp"
+        android:layout_marginTop="3dp"
+        android:background="@null"
+        android:scaleType="centerInside"
+        tools:src="@drawable/icon_check_box_white" />
+
+</RelativeLayout>

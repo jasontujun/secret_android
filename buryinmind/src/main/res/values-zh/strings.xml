@@ -15,11 +15,12 @@
     <string name="button_check_answer">确认挚友</string>
     <string name="button_activate">加入</string>
     <string name="button_back">返回</string>
-    <string name="button_settings">设置</string>
     <string name="button_set_date">那年那月</string>
     <string name="button_done">完成</string>
     <string name="button_yes">是</string>
     <string name="button_no">否</string>
+    <string name="button_settings">设置</string>
+    <string name="button_add_secret">添加</string>
 
     <string name="error_network">网络有点问题哦</string>
     <string name="error_exception">出现异常!</string>
@@ -47,5 +48,11 @@
     <string name="info_add_memory">添加回忆</string>
     <string name="info_add_memory_date">%1$d岁那年</string>
     <string name="info_delete_memory">确定抹去%1$d岁的这段回忆“%2$s”?</string>
+    <string name="info_delete_secret">确定抹去回忆里的这张图片?</string>
     <string name="info_choose_head">请选择一张图片作为头像</string>
+    <string name="info_choose_image">选择图片</string>
+    <string name="info_choose_image_done">完成 (%1$d张)</string>
+    <string name="info_all_image">所有图片</string>
+    <string name="info_memory_author">来自:</string>
+    <string name="info_memory_time">于 %1$s</string>
 </resources>
