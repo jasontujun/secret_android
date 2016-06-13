@@ -283,7 +283,6 @@ public class ImageSelectorActivity extends AppCompatActivity {
             //设置图片
             Glide.with(ImageSelectorActivity.this)
                     .load(item)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .error(R.drawable.icon_image_default_grey)
                     .into(holder.getView(R.id.item_image, ImageView.class));
 

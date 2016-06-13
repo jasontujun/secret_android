@@ -8,6 +8,8 @@ import com.tj.xengine.android.network.http.XAsyncHttpClient;
 import com.tj.xengine.android.network.http.java.XJavaHttpClient;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
+import com.tj.xengine.core.data.XListDataSource;
+import com.tj.xengine.core.data.XListFilteredIdSourceImpl;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttp;
@@ -16,8 +18,9 @@ import com.tj.xengine.core.network.http.XHttpConfig;
 import me.buryinmind.android.app.controller.SecretImageDownloader;
 import me.buryinmind.android.app.controller.SecretImageUploader;
 import me.buryinmind.android.app.data.GlobalSource;
+import me.buryinmind.android.app.data.SecretSource;
 import me.buryinmind.android.app.model.Memory;
-import me.buryinmind.android.app.model.Secret;
+import me.buryinmind.android.app.model.User;
 
 /**
  * 自定义的Application。
@@ -26,11 +29,12 @@ import me.buryinmind.android.app.model.Secret;
  */
 public class MyApplication extends Application {
 
-    private static final String TAG = "BuryInMindApplication";
+    private static final String TAG = MyApplication.class.getSimpleName();
 
     public static final String SOURCE_GLOBAL = "global";
     public static final String SOURCE_MEMORY = "memory";
     public static final String SOURCE_SECRET = "secret";
+    public static final String SOURCE_FRIEND = "friend";
 
     private static XAsyncHttp mAsyncHttp;
     private static XHttp mHttp;
@@ -53,15 +57,18 @@ public class MyApplication extends Application {
         mSecretUploader = new SecretImageUploader(this, mHttp, mUploadManager);
         mSecretDownloader = new SecretImageDownloader(mHttp, getCacheDir().getAbsolutePath());
 
-
         // 初始化数据库
         XDatabase.getInstance().init(getApplicationContext(), "buryinmind", 1);
 
         // 初始化数据源
         XDefaultDataRepo repo = XDefaultDataRepo.getInstance();
         repo.registerDataSource(new GlobalSource(this, SOURCE_GLOBAL));
-        repo.registerDataSource(new XListIdDataSourceImpl<Secret>(Secret.class, SOURCE_SECRET));
         repo.registerDataSource(new XListIdDataSourceImpl<Memory>(Memory.class, SOURCE_MEMORY));
+        repo.registerDataSource(new XListFilteredIdSourceImpl<User>(User.class, SOURCE_FRIEND));
+        SecretSource secretSource = new SecretSource(SOURCE_SECRET);
+        secretSource.setReplaceOverride(true);
+        secretSource.loadFromDatabase();
+        repo.registerDataSource(secretSource);
     }
 
     public static XHttp getHttp() {
@@ -90,5 +97,11 @@ public class MyApplication extends Application {
 
     public static SecretImageUploader getSecretUploader() {
         return mSecretUploader;
+    }
+
+    public static void clearDataSource() {
+        ((XListDataSource) XDefaultDataRepo.getInstance().getSource(SOURCE_MEMORY)).clear();
+        ((XListDataSource) XDefaultDataRepo.getInstance().getSource(SOURCE_FRIEND)).clear();
+        ((XListDataSource) XDefaultDataRepo.getInstance().getSource(SOURCE_SECRET)).clear();
     }
 }

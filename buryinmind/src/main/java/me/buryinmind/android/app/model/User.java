@@ -9,6 +9,7 @@ import org.json.JSONObject;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -16,6 +17,19 @@ import java.util.List;
  * Created by jason on 2016/4/19.
  */
 public class User implements Serializable {
+
+    public static final Comparator<User> comparator = new Comparator<User>() {
+        @Override
+        public int compare(User lhs, User rhs) {
+            if (lhs.isFriend && !rhs.isFriend) {
+                return  -1;
+            } else if (!lhs.isFriend && rhs.isFriend) {
+                return  1;
+            } else {
+                return lhs.name.compareTo(rhs.name);
+            }
+        }
+    };
 
     @XId
     public String uid;
@@ -30,10 +44,8 @@ public class User implements Serializable {
 
     public long createTime;
 
-    // [本地属性]
-    public List<Memory> ownMemoryList;
-    // [本地属性]
-    public List<Memory> otherMemoryList;
+    // 本地属性.标识此用户是否是好友
+    public boolean isFriend;
 
     public static User fromJson(JSONObject jo) {
         if (jo == null)
@@ -53,11 +65,12 @@ public class User implements Serializable {
                 }
             }
             user.state = jo.getInt("state");
-            Object bornObj = jo.get("born_time");
-            if (bornObj != null && !bornObj.equals(JSONObject.NULL)) {
+            if (jo.has("born_time") && !jo.isNull("born_time")) {
                 user.bornTime = jo.getLong("born_time");
             }
-            user.createTime = jo.getLong("create_time");
+            if (jo.has("create_time") && !jo.isNull("create_time")) {
+                user.createTime = jo.getLong("create_time");
+            }
             return user;
         } catch (JSONException e) {
             e.printStackTrace();

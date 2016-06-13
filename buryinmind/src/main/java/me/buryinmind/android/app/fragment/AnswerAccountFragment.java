@@ -45,7 +45,6 @@ public class AnswerAccountFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         if (getArguments() != null) {
-            mListener = (FragmentInteractListener) getArguments().getSerializable(FragmentInteractListener.KEY);
             mGift = (MemoryGift) getArguments().getSerializable(KEY_GIFT);
         }
     }
@@ -97,6 +96,10 @@ public class AnswerAccountFragment extends Fragment {
         return rootView;
     }
 
+    public void setListener(FragmentInteractListener listener) {
+        mListener = listener;
+    }
+
     private void tryAnswerAccount() {
         if (mWaiting)
             return;
@@ -122,7 +125,7 @@ public class AnswerAccountFragment extends Fragment {
             mListener.onLoading();
         }
         MyApplication.getAsyncHttp().execute(
-                ApiUtil.answerActivateQuestion(mGift.receiverId, mGift.bid, answer),
+                ApiUtil.answerActivateQuestion(mGift.receiverId, mGift.gid, answer),
                 new XAsyncHttp.Listener() {
                     @Override
                     public void onNetworkError() {

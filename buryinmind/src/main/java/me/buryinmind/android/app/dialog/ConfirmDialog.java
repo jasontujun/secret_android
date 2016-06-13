@@ -1,9 +1,9 @@
 package me.buryinmind.android.app.dialog;
 
 import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;

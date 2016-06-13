@@ -12,49 +12,49 @@ import java.lang.reflect.Field;
 /**
  * Created by jasontujun on 2016/5/12.
  */
-public class ParticleSystemExt extends ParticleSystem {
+public class XParticleSystem extends ParticleSystem {
     private Field pl;
     private Field exmin;
     private Field exmax;
     private Field eymin;
     private Field eymax;
 
-    public ParticleSystemExt(Activity a, int maxParticles, int drawableRedId, long timeToLive) {
+    public XParticleSystem(Activity a, int maxParticles, int drawableRedId, long timeToLive) {
         super(a, maxParticles, drawableRedId, timeToLive);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, int drawableRedId, long timeToLive, int parentViewId) {
+    public XParticleSystem(Activity a, int maxParticles, int drawableRedId, long timeToLive, int parentViewId) {
         super(a, maxParticles, drawableRedId, timeToLive, parentViewId);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, Drawable drawable, long timeToLive) {
+    public XParticleSystem(Activity a, int maxParticles, Drawable drawable, long timeToLive) {
         super(a, maxParticles, drawable, timeToLive);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, Drawable drawable, long timeToLive, int parentViewId) {
+    public XParticleSystem(Activity a, int maxParticles, Drawable drawable, long timeToLive, int parentViewId) {
         super(a, maxParticles, drawable, timeToLive, parentViewId);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, Bitmap bitmap, long timeToLive) {
+    public XParticleSystem(Activity a, int maxParticles, Bitmap bitmap, long timeToLive) {
         super(a, maxParticles, bitmap, timeToLive);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, Bitmap bitmap, long timeToLive, int parentViewId) {
+    public XParticleSystem(Activity a, int maxParticles, Bitmap bitmap, long timeToLive, int parentViewId) {
         super(a, maxParticles, bitmap, timeToLive, parentViewId);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, AnimationDrawable animation, long timeToLive) {
+    public XParticleSystem(Activity a, int maxParticles, AnimationDrawable animation, long timeToLive) {
         super(a, maxParticles, animation, timeToLive);
         init();
     }
 
-    public ParticleSystemExt(Activity a, int maxParticles, AnimationDrawable animation, long timeToLive, int parentViewId) {
+    public XParticleSystem(Activity a, int maxParticles, AnimationDrawable animation, long timeToLive, int parentViewId) {
         super(a, maxParticles, animation, timeToLive, parentViewId);
         init();
     }

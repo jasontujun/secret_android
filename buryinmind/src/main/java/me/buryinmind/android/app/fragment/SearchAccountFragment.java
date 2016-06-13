@@ -42,10 +42,6 @@ public class SearchAccountFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (getArguments() != null) {
-            mListener = (FragmentInteractListener) getArguments().getSerializable(FragmentInteractListener.KEY);
-        }
     }
 
     @Override
@@ -76,6 +72,10 @@ public class SearchAccountFragment extends Fragment {
             }
         });
         return rootView;
+    }
+
+    public void setListener(FragmentInteractListener listener) {
+        mListener = listener;
     }
 
     private void tryGetActiveAccountList(final boolean isRegister) {

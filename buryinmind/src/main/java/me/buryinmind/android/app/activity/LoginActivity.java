@@ -7,6 +7,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Pair;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
@@ -44,6 +45,8 @@ import me.buryinmind.android.app.util.ViewUtil;
  */
 public class LoginActivity extends AppCompatActivity {
 
+    public static final String RE_LOGIN = "re_login";
+
     private static final int STEP_START = 1;
     private static final int STEP_LOGIN_LIST = 11;
     private static final int STEP_LOGIN_HAS_USER = 12;
@@ -77,40 +80,55 @@ public class LoginActivity extends AppCompatActivity {
         mProgressView = findViewById(R.id.login_progress);
         mLoginFormView = findViewById(R.id.content_layout);
 
-        if (savedInstanceState == null) {
-            GlobalSource source = (GlobalSource) XDefaultDataRepo
-                    .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-            if (!XStringUtil.isEmpty(source.getLastUserId()) &&
-                    !XStringUtil.isEmpty(source.getUserToken()) &&
-                    System.currentTimeMillis() - source.getLastTokenTime()
-                            < GlobalSource.DEFAULT_TOKEN_DURATION) {
+        String reLoginName = getIntent().getStringExtra(RE_LOGIN);
+        if (!XStringUtil.isEmpty(reLoginName)) {
+            getFragmentManager().beginTransaction()
+                    .add(R.id.content_layout, createFragment(STEP_START))
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .commit();
+            return;
+        }
+
+        GlobalSource source = (GlobalSource) XDefaultDataRepo
+                .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+        if (!XStringUtil.isEmpty(source.getLastUserId()) &&
+                !XStringUtil.isEmpty(source.getUserToken()) &&
+                System.currentTimeMillis() - source.getLastTokenTime()
+                        < GlobalSource.DEFAULT_TOKEN_DURATION) {
+            // 如果有上次的token，则尝试快速验证Token登录
+            lastUserId = source.getLastUserId();
+            lastUserName = source.getLastUserName();
+            lastUserDescription = source.getLastUserDescriptions();
+            checkTokenLogin(source.getLastUserId(), source.getUserToken());
+        } else {
+            if (!XStringUtil.isEmpty(source.getLastUserId())) {
+                // 有记录上次登录的账号，则直接输入密码即可
+                chooseUser = null;
                 lastUserId = source.getLastUserId();
                 lastUserName = source.getLastUserName();
                 lastUserDescription = source.getLastUserDescriptions();
-                // 如果有上次的token，则尝试快速验证Token登录
-                checkTokenLogin(source.getLastUserId(), source.getUserToken());
+                getFragmentManager().beginTransaction()
+                        .add(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
+                        .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                        .commit();
             } else {
-                if (!XStringUtil.isEmpty(source.getLastUserId())) {
-                    // 有记录上次登录的账号，则直接输入密码即可
-                    chooseUser = null;
-                    lastUserId = source.getLastUserId();
-                    lastUserName = source.getLastUserName();
-                    lastUserDescription = source.getLastUserDescriptions();
-                    getFragmentManager().beginTransaction()
-                            .add(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
-                            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-                            .commit();
-                } else {
-                    // 没有任何记录，从搜索账号界面开始
-                    getFragmentManager().beginTransaction()
-                            .add(R.id.content_layout, createFragment(STEP_START))
-                            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-                            .commit();
-                }
+                // 没有任何记录，从搜索账号界面开始
+                getFragmentManager().beginTransaction()
+                        .add(R.id.content_layout, createFragment(STEP_START))
+                        .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                        .commit();
             }
         }
     }
 
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (this.getCurrentFocus() != null){
+            // 点击空白位置 隐藏软键盘
+            ViewUtil.hidInputMethod(this);
+        }
+        return super .onTouchEvent(event);
+    }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent e) {
@@ -145,7 +163,7 @@ public class LoginActivity extends AppCompatActivity {
         switch (step) {
             case STEP_START:
                 fragment = new SearchAccountFragment();
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((SearchAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -184,11 +202,7 @@ public class LoginActivity extends AppCompatActivity {
                 break;
             case STEP_LOGIN_LIST:
                 fragment = new ChooseAccountFragment();
-                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
-                        ChooseAccountFragment.TYPE_ACTIVE_ACCOUNT_LIST);
-                arguments.putSerializable(ChooseAccountFragment.KEY_ACCOUNTS,
-                        (Serializable) activeAccounts);
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((ChooseAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -207,7 +221,7 @@ public class LoginActivity extends AppCompatActivity {
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
                                 if (result && data != null) {
-                                    chooseUser = (User)data;
+                                    chooseUser = (User) data;
                                     getFragmentManager().beginTransaction()
                                             .replace(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                             .addToBackStack(null)
@@ -216,21 +230,14 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
+                        ChooseAccountFragment.TYPE_ACTIVE_ACCOUNT_LIST);
+                arguments.putSerializable(ChooseAccountFragment.KEY_ACCOUNTS,
+                        (Serializable) activeAccounts);
                 break;
             case STEP_LOGIN_HAS_USER:
                 fragment = new LoginAccountFragment();
-                if (chooseUser != null) {
-                    arguments.putString(LoginAccountFragment.KEY_USER_ID, chooseUser.uid);
-                    arguments.putString(LoginAccountFragment.KEY_USER_NAME, chooseUser.name);
-                    arguments.putSerializable(LoginAccountFragment.KEY_USER_DESCRIPTION,
-                            (Serializable) chooseUser.descriptions);
-                } else {
-                    arguments.putString(LoginAccountFragment.KEY_USER_ID, lastUserId);
-                    arguments.putString(LoginAccountFragment.KEY_USER_NAME, lastUserName);
-                    arguments.putSerializable(LoginAccountFragment.KEY_USER_DESCRIPTION,
-                            (Serializable) lastUserDescription);
-                }
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((LoginAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -254,14 +261,21 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                if (chooseUser != null) {
+                    arguments.putString(LoginAccountFragment.KEY_USER_ID, chooseUser.uid);
+                    arguments.putString(LoginAccountFragment.KEY_USER_NAME, chooseUser.name);
+                    arguments.putSerializable(LoginAccountFragment.KEY_USER_DESCRIPTION,
+                            (Serializable) chooseUser.descriptions);
+                } else {
+                    arguments.putString(LoginAccountFragment.KEY_USER_ID, lastUserId);
+                    arguments.putString(LoginAccountFragment.KEY_USER_NAME, lastUserName);
+                    arguments.putSerializable(LoginAccountFragment.KEY_USER_DESCRIPTION,
+                            (Serializable) lastUserDescription);
+                }
                 break;
             case STEP_ACTIVATE_USERS:
                 fragment = new ChooseAccountFragment();
-                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
-                        ChooseAccountFragment.TYPE_SEED_ACCOUNT_LIST);
-                arguments.putSerializable(ChooseAccountFragment.KEY_ACCOUNTS,
-                        (Serializable) seedAccounts);
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((ChooseAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -280,7 +294,7 @@ public class LoginActivity extends AppCompatActivity {
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
                                 if (result && data != null) {
-                                    chooseUser = (User)data;
+                                    chooseUser = (User) data;
                                     getSeedAccountDetail(chooseUser.uid,
                                             new XAsyncHttp.Listener<List<MemoryGift>>() {
                                                 @Override
@@ -303,16 +317,14 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
+                        ChooseAccountFragment.TYPE_SEED_ACCOUNT_LIST);
+                arguments.putSerializable(ChooseAccountFragment.KEY_ACCOUNTS,
+                        (Serializable) seedAccounts);
                 break;
             case STEP_ACTIVATE_GIFTS:
                 fragment = new ChooseAccountFragment();
-                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
-                        ChooseAccountFragment.TYPE_GIFT_LIST);
-                arguments.putSerializable(ChooseAccountFragment.KEY_GIFTS,
-                        (Serializable) gifts);
-                arguments.putSerializable(ChooseAccountFragment.KEY_CHOOSE_USER,
-                        chooseUser);
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((ChooseAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -331,7 +343,7 @@ public class LoginActivity extends AppCompatActivity {
                             public void onFinish(boolean result, Object data) {
                                 showProgress(false);
                                 if (result && data != null) {
-                                    chooseGift = (MemoryGift)data;
+                                    chooseGift = (MemoryGift) data;
                                     getFragmentManager().beginTransaction()
                                             .replace(R.id.content_layout, createFragment(STEP_ACTIVATE_ANSWER))
                                             .addToBackStack(null)
@@ -340,11 +352,16 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                arguments.putInt(ChooseAccountFragment.KEY_TYPE,
+                        ChooseAccountFragment.TYPE_GIFT_LIST);
+                arguments.putSerializable(ChooseAccountFragment.KEY_GIFTS,
+                        (Serializable) gifts);
+                arguments.putSerializable(ChooseAccountFragment.KEY_CHOOSE_USER,
+                        chooseUser);
                 break;
             case STEP_ACTIVATE_ANSWER:
                 fragment = new AnswerAccountFragment();
-                arguments.putSerializable(AnswerAccountFragment.KEY_GIFT, chooseGift);
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((AnswerAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -372,12 +389,11 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                arguments.putSerializable(AnswerAccountFragment.KEY_GIFT, chooseGift);
                 break;
             case STEP_ACTIVATE_PASSWORD:
                 fragment = new ActivateAccountFragment();
-                arguments.putSerializable(ActivateAccountFragment.KEY_GIFT, chooseGift);
-                arguments.putSerializable(ActivateAccountFragment.KEY_ANSWER, giftAnswer);
-                arguments.putSerializable(FragmentInteractListener.KEY,
+                ((ActivateAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
                             public void onLoading() {
@@ -413,6 +429,8 @@ public class LoginActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                arguments.putSerializable(ActivateAccountFragment.KEY_GIFT, chooseGift);
+                arguments.putSerializable(ActivateAccountFragment.KEY_ANSWER, giftAnswer);
                 break;
         }
         if (fragment != null) {

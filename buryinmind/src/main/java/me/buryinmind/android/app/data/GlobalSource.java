@@ -127,8 +127,8 @@ public class GlobalSource implements XDataSource {
         } else {
             editor.putString(KEY_USER_DES, "");
         }
-        if (user.name != null && !userNameRecords.contains(name)) {// 更新userNameRecords
-            userNameRecords.add(name);
+        if (!XStringUtil.isEmpty(user.name) && !userNameRecords.contains(user.name)) {// 更新userNameRecords
+            userNameRecords.add(user.name);
             editor.putString(KEY_USER_RECORD, JsonUtil.List2JsonString(userNameRecords));
         }
         editor.apply();

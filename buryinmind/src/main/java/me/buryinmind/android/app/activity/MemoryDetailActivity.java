@@ -1,5 +1,7 @@
 package me.buryinmind.android.app.activity;
 
+import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.os.Bundle;
@@ -13,6 +15,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -20,6 +23,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,24 +31,42 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.tj.xengine.android.data.XListIdDBDataSourceImpl;
+import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
+import com.tj.xengine.core.network.http.XAsyncHttp;
+import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.controller.ProgressListener;
+import me.buryinmind.android.app.data.SecretSource;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
 import me.buryinmind.android.app.dialog.DialogListener;
+import me.buryinmind.android.app.fragment.FragmentInteractListener;
+import me.buryinmind.android.app.fragment.MemoryDetailFragment;
+import me.buryinmind.android.app.fragment.PostMemoryFragment;
+import me.buryinmind.android.app.fragment.SearchFriendsFragment;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.Secret;
+import me.buryinmind.android.app.model.User;
+import me.buryinmind.android.app.uicontrol.XListAdapter;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.TimeUtil;
 import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.util.ViewUtil;
 
 /**
  * Created by jasontujun on 2016/5/15.
@@ -54,48 +76,41 @@ public class MemoryDetailActivity extends AppCompatActivity {
     private static final String TAG = MemoryDetailActivity.class.getSimpleName();
     private static final int IMAGE_REQUEST_CODE = 9900;
 
+    private MemoryDetailFragment mSecretsFragment;
+    private SearchFriendsFragment mFriendsFragment;
+    private PostMemoryFragment mPostFragment;
+
     private CollapsingToolbarLayout mCollapsedLayout;
     private AppBarLayout mAppBar;
     private Toolbar mToolBar;
-    private ImageView mMemoryProfileView;
-    private RecyclerView mEditableView;
-    private EditAdapter mEditAdapter;
-    private ItemTouchHelper mItemTouchHelper;
+    private MenuItem mAddBtn;
+    private MenuItem mPostBtn;
 
     private boolean mCollapsed = false;
-    private boolean mListTop = true;
-    private boolean mAutoExpand = true;
     private Memory mMemory;
-    private int mScreenWidth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_memory_detail);
 
-        DisplayMetrics outMetrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(outMetrics);
-        mScreenWidth = outMetrics.widthPixels;
-
+        // init memory data
         Intent intent = getIntent();
         String memoryId = intent.getStringExtra("mid");
         if (XStringUtil.isEmpty(memoryId)) {
-            // TODO error
-            return;
+            return;// error
         }
         XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
                 XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
         mMemory = source.getById(memoryId);
         if (mMemory == null) {
-            // TODO error
-            return;
+            return;// error
         }
 
         mCollapsedLayout = (CollapsingToolbarLayout) findViewById(R.id.toolbar_layout);
         mToolBar = (Toolbar) findViewById(R.id.toolbar);
         mAppBar = (AppBarLayout) findViewById(R.id.app_bar);
-        mMemoryProfileView = (ImageView) findViewById(R.id.memory_profile_bg);
-        mEditableView = (RecyclerView) findViewById(R.id.secret_edit_list);
+        ImageView mMemoryProfileView = (ImageView) findViewById(R.id.memory_profile_bg);
         TextView mMemoryTime = (TextView) findViewById(R.id.memory_time_view);
         View mAuthorLayout = findViewById(R.id.memory_author_layout);
         ImageView mAuthorHeader = (ImageView) findViewById(R.id.account_head_img);
@@ -107,6 +122,9 @@ public class MemoryDetailActivity extends AppCompatActivity {
         mAppBar.addOnOffsetChangedListener(new AppBarLayout.OnOffsetChangedListener() {
             @Override
             public void onOffsetChanged(AppBarLayout appBarLayout, int verticalOffset) {
+//                XLog.d(TAG, "onOffsetChanged().verticalOffset=" + verticalOffset
+//                        + ",mToolBar.getHeight()=" + mToolBar.getHeight()
+//                        + ",mCollapsedLayout.getHeight()=" + mCollapsedLayout.getHeight());
                 if (verticalOffset <= mToolBar.getHeight() - mCollapsedLayout.getHeight()) {
                     // 已经彻底折叠
                     XLog.d(TAG, "mAppBar already collapsed");
@@ -118,12 +136,17 @@ public class MemoryDetailActivity extends AppCompatActivity {
         });
 
         // init profile and author
-        Glide.with(MemoryDetailActivity.this)
-                .load(ApiUtil.getIdUrl(memoryId))
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .priority(Priority.HIGH)
-                .error(R.color.darkGray)
-                .into(mMemoryProfileView);
+        if (!XStringUtil.isEmpty(mMemory.coverUrl)) {
+            Glide.with(MemoryDetailActivity.this)
+                    .load(mMemory.coverUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .priority(Priority.HIGH)
+                    .placeholder(R.color.darkGray)
+                    .error(R.color.darkGray)
+                    .into(mMemoryProfileView);
+        } else {
+            mMemoryProfileView.setImageResource(R.color.darkGray);
+        }
         mMemoryProfileView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -145,142 +168,22 @@ public class MemoryDetailActivity extends AppCompatActivity {
             mAuthorLayout.setVisibility(View.GONE);
         }
 
-        // init recycler view
-        mEditableView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                super.onScrollStateChanged(recyclerView, newState);
-            }
-
-            @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                // 已经滑到顶部，不能再向上滑了
-                if (!ViewCompat.canScrollVertically(recyclerView, -1)) {
-                    if (!mListTop) {
-                        mListTop = true;
-                        if (mAutoExpand) {
-                            mAppBar.setExpanded(true, true);
-                        }
-                        XLog.d(TAG, "mEditableView scroll to top! expand appbar!");
-                    } else {
-                        XLog.d(TAG, "mEditableView already scroll to top! not expand appbar!");
-                    }
-                } else {
-                    mListTop = false;
-                }
-            }
-        });
-        mEditableView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        mEditAdapter = new EditAdapter(mMemory.secrets);
-        mEditableView.setAdapter(mEditAdapter);
-        ItemTouchHelper.Callback mCallback = new ItemTouchHelper.SimpleCallback
-                (ItemTouchHelper.UP|ItemTouchHelper.DOWN, ItemTouchHelper.RIGHT) {
-            @Override
-            public boolean onMove(RecyclerView recyclerView,
-                                  RecyclerView.ViewHolder viewHolder,
-                                  RecyclerView.ViewHolder target) {
-                XLog.d(TAG, "onMove");
-                int fromPosition = viewHolder.getAdapterPosition();//得到拖动ViewHolder的position
-                int toPosition = target.getAdapterPosition();//得到目标ViewHolder的position
-                XLog.d(TAG, "from=" + fromPosition + ",to="
-                        + toPosition + ",total=" + mMemory.secrets.size());
-                if (fromPosition < toPosition) {
-                    //分别把中间所有的item的位置重新交换
-                    for (int i = fromPosition; i < toPosition; i++) {
-                        Collections.swap(mMemory.secrets, i, i + 1);
-                        Collections.swap(mEditAdapter.mItems, i, i + 1);
-                    }
-                } else {
-                    for (int i = fromPosition; i > toPosition; i--) {
-                        Collections.swap(mMemory.secrets, i, i - 1);
-                        Collections.swap(mEditAdapter.mItems, i, i - 1);
-                    }
-                }
-                mEditAdapter.notifyItemMoved(fromPosition, toPosition);
-                //返回true表示执行拖动
-                return true;
-            }
-
-            @Override
-            public void onSwiped(final RecyclerView.ViewHolder viewHolder, int direction) {
-                XLog.d(TAG, "onSwiped, direction=" + direction);
-                ConfirmDialog.newInstance(
-                        getResources().getString(R.string.info_delete_secret),
-                        new DialogListener() {
-                            boolean confirm = false;
-
-                            @Override
-                            public void onDone(Object... result) {
-                                confirm = (boolean) result[0];
-                                if (confirm) {
-                                    XViewHolder holder = (XViewHolder) viewHolder;
-                                    mEditAdapter.deleteData((Secret) holder.getData());
-                                }
-                            }
-
-                            @Override
-                            public void onDismiss() {
-                                if (!confirm) {
-                                    mEditAdapter.notifyDataSetChanged();
-                                }
-                            }
-                        }).show(getSupportFragmentManager(), ConfirmDialog.TAG);
-            }
-
-            @Override
-            public boolean isLongPressDragEnabled() {
-                return false;
-            }
-
-
-            @Override
-            public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
-                                    float dX, float dY, int actionState, boolean isCurrentlyActive) {
-                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
-                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
-                    //滑动时改变Item的透明度
-                    final float alpha = 1 - Math.abs(dX) / (float)viewHolder.itemView.getWidth();
-                    viewHolder.itemView.setAlpha(alpha);
-                    viewHolder.itemView.setTranslationX(dX);
-                }
-            }
-
-            @Override
-            public void onSelectedChanged(RecyclerView.ViewHolder viewHolder,
-                                          int actionState) {
-                XLog.d(TAG, "onSelectedChanged, actionState=" + actionState);
-                // item拖拽被触发时
-                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-                    mAutoExpand = false;
-                    if (!mCollapsed) {
-                        mAppBar.setExpanded(false, true);
-                    }
-                    XViewHolder holder = (XViewHolder) viewHolder;
-                    holder.getView(R.id.secret_item_cover_layout).setVisibility(View.VISIBLE);
-                }
-                super.onSelectedChanged(viewHolder, actionState);
-            }
-
-            @Override
-            public void clearView(RecyclerView recyclerView,
-                                  RecyclerView.ViewHolder viewHolder) {
-                XLog.d(TAG, "clearView");
-                super.clearView(recyclerView, viewHolder);
-                mAutoExpand = true;
-                XViewHolder holder = (XViewHolder) viewHolder;
-                holder.getView(R.id.secret_item_cover_layout).setVisibility(View.GONE);
-                holder.itemView.setAlpha(1);
-            }
-        };
-        mItemTouchHelper = new ItemTouchHelper(mCallback);
-        mItemTouchHelper.attachToRecyclerView(mEditableView);
+        if (mSecretsFragment == null) {
+            mSecretsFragment = (MemoryDetailFragment) createSecretsFragment();
+        }
+        getFragmentManager().beginTransaction()
+                .add(R.id.content_layout, mSecretsFragment)
+                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                .commit();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_memory, menu);
+        mAddBtn = menu.getItem(0);
+        mPostBtn = menu.getItem(1);
+        mPostBtn.setVisible(false);
         return true;
     }
 
@@ -289,12 +192,16 @@ public class MemoryDetailActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case android.R.id.home:
                 XLog.d(TAG, "click back btn!");
-                onBackPressed();
+                onKeyDown(KeyEvent.KEYCODE_BACK, null);
                 return true;
             case R.id.action_add:
                 XLog.d(TAG, "click add btn!");
                 Intent intent = new Intent(MemoryDetailActivity.this, ImageSelectorActivity.class);
                 startActivityForResult(intent, IMAGE_REQUEST_CODE);
+                return true;
+            case  R.id.action_post:
+                XLog.d(TAG, "click post btn!");
+                goToNext(SearchFriendsFragment.class, null);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -307,101 +214,171 @@ public class MemoryDetailActivity extends AppCompatActivity {
             case IMAGE_REQUEST_CODE:
                 if (resultCode == RESULT_OK && data != null) {
                     List<String> selectedImages = (List<String>) data.getExtras().getSerializable("result");
-                    if (selectedImages == null)
+                    if (selectedImages == null || selectedImages.size() == 0)
                         break;
-                    List<Secret> newSecrets = new ArrayList<Secret>();
+                    final List<Secret> newSecrets = new ArrayList<Secret>();
                     for (String imagePath : selectedImages) {
                         Secret se = Secret.createLocal(mMemory.mid, imagePath);
-                        se.order = mMemory.secrets.size();
-                        mMemory.secrets.add(se);
+                        se.order = mMemory.secrets.size() + newSecrets.size();
                         newSecrets.add(se);
                     }
-                    mEditAdapter.addData(newSecrets);
+                    mSecretsFragment.addSecret(newSecrets);
                 }
                 break;
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-
-    private class EditAdapter extends RecyclerView.Adapter<XViewHolder> {
-        private final List<Secret> mItems;
-
-        public EditAdapter(List<Secret> items) {
-            mItems = new ArrayList<Secret>();
-            if (items != null)
-                mItems.addAll(items);
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (this.getCurrentFocus() != null){
+            // 点击空白位置 隐藏软键盘
+            ViewUtil.hidInputMethod(this);
         }
+        return super .onTouchEvent(event);
+    }
 
-        public void addData(Secret data) {
-            int position = mItems.size();
-            mItems.add(data);
-            notifyItemInserted(position);
-        }
-
-        public void addData(List<Secret> data) {
-            int position = mItems.size();
-            mItems.addAll(data);
-            notifyItemRangeInserted(position, data.size());
-        }
-
-        public void deleteData(Secret data) {
-            int pos = mItems.indexOf(data);
-            if (pos == -1) {
-                return;
-            }
-            mItems.remove(data);
-            notifyItemRemoved(pos);
-        }
-
-
-        @Override
-        public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            return new XViewHolder(LayoutInflater.from(MemoryDetailActivity.this)
-                    .inflate(R.layout.item_edit_secret, parent, false));
-        }
-
-        @Override
-        public void onBindViewHolder(final XViewHolder holder, final int position) {
-            final Secret item = mItems.get(position);
-            holder.bindData(item);
-            // set image
-            ImageView imageView = (ImageView) holder.getView(R.id.secret_item_img);
-            int imageViewWidth = mScreenWidth;
-            int imageViewHeight = imageViewWidth  * item.height / item.width;
-            XLog.d(TAG, "imageWidth=" + imageViewWidth + ",imageHeight=" + imageViewHeight);
-            ViewGroup.LayoutParams params = imageView.getLayoutParams();
-            params.width = imageViewWidth;
-            params.height = imageViewHeight;
-            imageView.setLayoutParams(params);
-            Glide.with(MemoryDetailActivity.this)
-                    .load(item.localPath)
-                    .error(R.drawable.icon_image_default_grey)
-                    .into(imageView);
-            // set drag handle
-            holder.getView(R.id.secret_item_handle).setOnTouchListener(
-                    new View.OnTouchListener() {
-                        @Override
-                        public boolean onTouch(View v, MotionEvent event) {
-                            if (MotionEventCompat.getActionMasked(event) ==
-                                    MotionEvent.ACTION_DOWN) {
-                                mItemTouchHelper.startDrag(holder);
-                            }
-                            return false;
-                        }
-                    });;
-            holder.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Toast.makeText(MemoryDetailActivity.this,
-                            "click image " + item.localPath, Toast.LENGTH_SHORT).show();
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent e) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_BACK:
+                if (getFragmentManager().getBackStackEntryCount() > 0) {
+                    backToLast();
+                } else {
+                    onBackPressed();
                 }
-            });
+                return true;
+            case KeyEvent.KEYCODE_MENU:
+                break;
         }
+        return false;
+    }
 
-        @Override
-        public int getItemCount() {
-            return mItems.size();
+    private void goToNext(Class<?> clazz, Object data) {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        if (current == null)
+            return;
+        if (current instanceof MemoryDetailFragment &&
+                clazz == SearchFriendsFragment.class) {
+            mPostBtn.setVisible(false);
+            collapseToolBar();
+            if (mFriendsFragment == null) {
+                mFriendsFragment = (SearchFriendsFragment) createFriendsFragment();
+            }
+            getFragmentManager().beginTransaction()
+                    .replace(R.id.content_layout, mFriendsFragment)
+                    .addToBackStack(null)
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .commit();
+        } else if (current instanceof SearchFriendsFragment &&
+                clazz == PostMemoryFragment.class) {
+            expandToolBar();
+            User user = (User) data;
+            if (mPostFragment == null) {
+                mPostFragment = (PostMemoryFragment) createPostFragment(user);
+            } else {
+                mPostFragment.getArguments().putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
+            }
+            getFragmentManager().beginTransaction()
+                    .replace(R.id.content_layout, mPostFragment)
+                    .addToBackStack(null)
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .commit();
+        }
+    }
+
+    private void backToLast() {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        if (current == null)
+            return;
+        getFragmentManager().popBackStack();
+        if (current instanceof SearchFriendsFragment) {
+            refreshShareBtn();
+            expandToolBar();
+            mSecretsFragment.needScrollToTop();
+        } else if (current instanceof PostMemoryFragment) {
+            collapseToolBar();
+        }
+    }
+
+    private Fragment createSecretsFragment() {
+        Fragment fragment = new MemoryDetailFragment();
+        Bundle arguments = new Bundle();
+        arguments.putString(MemoryDetailFragment.KEY_MID, mMemory.mid);
+        fragment.setArguments(arguments);
+        return fragment;
+    }
+
+    private Fragment createFriendsFragment() {
+        SearchFriendsFragment fragment = new SearchFriendsFragment();
+        Bundle arguments = new Bundle();
+        fragment.setListener(
+                new FragmentInteractListener() {
+                    @Override
+                    public void onLoading() {
+                    }
+
+                    @Override
+                    public void onBack() {
+                    }
+
+                    @Override
+                    public void onFinish(boolean result, Object data) {
+                        if (result) {
+                            goToNext(PostMemoryFragment.class, data);
+                        }
+                    }
+                });
+        fragment.setArguments(arguments);
+        return fragment;
+    }
+
+    private Fragment createPostFragment(User user) {
+        PostMemoryFragment fragment = new PostMemoryFragment();
+        fragment.setListener(
+                new FragmentInteractListener() {
+                    @Override
+                    public void onLoading() {
+                    }
+
+                    @Override
+                    public void onBack() {
+                    }
+
+                    @Override
+                    public void onFinish(boolean result, Object data) {
+                        if (result) {
+                            // TODO 发送成功,重新进入Memory详情界面
+                            Intent intent = new Intent(MemoryDetailActivity.this, MemoryDetailActivity.class);
+                            intent.putExtra("mid", mMemory.mid);
+                            startActivity(intent);
+                            finish();
+                        }
+                    }
+                });
+        Bundle arguments = new Bundle();
+        arguments.putString(PostMemoryFragment.KEY_MID, mMemory.mid);
+        arguments.putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
+        fragment.setArguments(arguments);
+        return fragment;
+    }
+
+    public void collapseToolBar() {
+        if (!mCollapsed) {
+            XLog.d(TAG, "try collapseToolBar..");
+            mAppBar.setExpanded(false, true);
+        }
+    }
+
+    public void expandToolBar() {
+        mAppBar.setExpanded(true, true);
+    }
+
+    public void refreshShareBtn() {
+        if (mMemory.secrets.size() > 0) {
+            mPostBtn.setVisible(true);
+        } else {
+            mPostBtn.setVisible(false);
         }
     }
 }

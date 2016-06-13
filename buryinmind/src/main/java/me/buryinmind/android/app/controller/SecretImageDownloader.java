@@ -5,12 +5,12 @@ import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.MainThread;
 
-import com.tj.xengine.android.download.XHttpDownloadTask;
+import com.tj.xengine.android.network.download.XHttpDownloadTask;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
-import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.download.XBaseHttpDownloader;
-import com.tj.xengine.core.download.XDownloadBean;
+import com.tj.xengine.android.utils.XStorageUtil;
+import com.tj.xengine.core.network.download.XBaseHttpDownloader;
+import com.tj.xengine.core.network.download.XDownloadBean;
 import com.tj.xengine.core.network.http.XHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.toolkit.taskmgr.XMgrTaskExecutor;
@@ -25,11 +25,9 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import me.buryinmind.android.app.MyApplication;
-import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.model.Secret;
-import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
+import me.buryinmind.android.app.util.CryptoUtil;
 
 /**
  * Created by jasontujun on 2016/5/24.
@@ -53,15 +51,16 @@ public class SecretImageDownloader {
     private static final String TAG = SecretImageDownloader.class.getSimpleName();
     private static final int MSG_FINISH = 1;
     private static final int MSG_ERROR = 2;
+    private static final int MSG_PROGRESS = 3;
 
     private XBaseHttpDownloader mDownloader;
     private String mSaveFolder;
     private Map<String, Secret> mSecrets;
-    private Map<String, ResultListener<Secret>> mListener;
+    private Map<String, ProgressListener<Secret>> mListener;
 
     public SecretImageDownloader(XHttp httpClient, String folder) {
         mSecrets = new HashMap<String, Secret>();
-        mListener = new HashMap<String, ResultListener<Secret>>();
+        mListener = new HashMap<String, ProgressListener<Secret>>();
         mSaveFolder = folder;
         mDownloader = new SecretImageDownloadMgr(httpClient);
         mDownloader.registerListener(new InnerListener(
@@ -71,8 +70,13 @@ public class SecretImageDownloader {
                             public boolean handleMessage(Message msg) {
                                 String sid = (String) msg.obj;
                                 Secret secret = mSecrets.get(sid);
-                                ResultListener<Secret> listener = mListener.get(sid);
+                                ProgressListener<Secret> listener = mListener.get(sid);
                                 switch (msg.what) {
+                                    case MSG_PROGRESS:
+                                        secret.completeSize = msg.arg1;
+                                        listener.onProgress(secret,
+                                                secret.completeSize, secret.size);
+                                        break;
                                     case MSG_FINISH:
                                         mSecrets.remove(sid);
                                         mListener.remove(sid);
@@ -90,30 +94,17 @@ public class SecretImageDownloader {
     }
 
     @MainThread
-    public void download(Secret secret, ResultListener<Secret> listener) {
-        if (!XStringUtil.isEmpty(secret.localPath)) {
-            File file = new File(secret.localPath);
-            if (file.exists()) {
-                // Secret文件已下载，直接回调
-                if (listener != null) {
-                    listener.onResult(true, secret);
-                }
-                return;
-            }
-        }
+    public boolean download(Secret secret, ProgressListener<Secret> listener) {
         SecretDownloadBean bean = new SecretDownloadBean(secret);
         bean.setFolder(mSaveFolder);
-        if (Secret.MIME_JPEG.equals(secret.mime)) {
-            bean.setFileName(secret.sid + ".jpg");
-        } else if (Secret.MIME_PNG.equals(secret.mime)) {
-            bean.setFileName(secret.sid + ".png");
-        } else {
-            bean.setFileName(secret.sid);
-        }
+        bean.setFileName(secret.getCacheFileName());
         if (mDownloader.addTask(bean)) {
             mSecrets.put(secret.sid, secret);
             mListener.put(secret.sid, listener);
             mDownloader.startDownload();
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -124,7 +115,6 @@ public class SecretImageDownloader {
     public void resume() {
         mDownloader.resumeDownload();
     }
-
 
     private static class InnerListener implements XBaseHttpDownloader.Listener {
 
@@ -144,13 +134,19 @@ public class SecretImageDownloader {
         public void onStopAll() {}
 
         @Override
-        public void onDownloading(String id, long completeSize, long totalSize) {}
+        public void onDownloading(String id, long completeSize, long totalSize) {
+            Message msg = handler.obtainMessage(MSG_PROGRESS);
+            msg.obj = id;
+            msg.arg1 = (int) completeSize;
+            msg.sendToTarget();
+        }
 
         @Override
         public void onSpeedUpdate(String id, long speed) {}
 
         @Override
         public void onComplete(String id, File file) {
+            // 下载完成，需要解密
             if (file != null) {
                 file.deleteOnExit();
             }
@@ -217,15 +213,9 @@ public class SecretImageDownloader {
             if (!(bean instanceof SecretDownloadBean)) {
                 return null;
             }
-            GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance()
-                    .getSource(MyApplication.SOURCE_GLOBAL);
-            final User user = source.getUser();
-            if (user == null) {
-                return null;
-            }
             SecretDownloadBean secretBean = (SecretDownloadBean) bean;
             XHttpResponse response = mHttpClient.execute(ApiUtil.getSecretDownloadUrl
-                    (user.uid, secretBean.secret.mid, secretBean.secret.sid));
+                    (secretBean.secret.mid, secretBean.secret.sid));
             if (response == null) {
                 XLog.d(TAG, "获取secret下载地址返回的response为空");
                 return null;
@@ -247,6 +237,47 @@ public class SecretImageDownloader {
                 e.printStackTrace();
             }
             return url;
+        }
+
+        @Override
+        protected String postDownload(XDownloadBean bean) {
+            if (!(bean instanceof SecretDownloadBean)) {
+                return "-0100";
+            }
+            SecretDownloadBean secretBean = (SecretDownloadBean) bean;
+            File srcFile = new File(secretBean.getFolder(), secretBean.getFileName());
+            File deFile = decrypt(secretBean.secret, srcFile);
+            if (deFile != null && deFile.exists()) {
+                secretBean.secret.localPath = deFile.getAbsolutePath();// 设置localPath!
+                srcFile.delete();
+                XLog.d(TAG, "secret文件解密成功!" + deFile.getAbsolutePath());
+                return null;
+            } else {
+                XLog.d(TAG, "secret文件解密失败!");
+                return "-0100";
+            }
+        }
+
+        /**
+         * 解密文件
+         */
+        private File decrypt(Secret secret, File srcFile) {
+            if (XStringUtil.isEmpty(secret.sid))
+                return null;
+            String decryptFileName = "d_" + srcFile.getName();
+            File decryptFile = new File(srcFile.getParentFile(), decryptFileName);
+            if (decryptFile.exists()) {
+                // 已经存在，则删除重新解密
+                decryptFile.delete();
+            }
+            if (XStorageUtil.isFull(srcFile.getParentFile().getAbsolutePath(), secret.size)) {
+                return null;// 容量不足
+            }
+            String keyStr = CryptoUtil.toMd5(secret.sid, 16);
+            String ivStr = CryptoUtil.toMd5(String.valueOf(secret.createTime), 16);
+            decryptFile = CryptoUtil.aesDecryptFile(srcFile.getAbsolutePath(),
+                    keyStr.getBytes(), ivStr.getBytes(), decryptFile.getAbsolutePath());
+            return decryptFile;
         }
     }
 

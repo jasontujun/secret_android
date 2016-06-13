@@ -7,8 +7,11 @@
     <string name="prompt_password">密码</string>
     <string name="prompt_password_confirm">确认密码</string>
     <string name="prompt_email">邮箱</string>
-    <string name="prompt_answer">回答</string>
+    <string name="prompt_question">问题</string>
+    <string name="prompt_answer">答案</string>
     <string name="prompt_memory_name">以回忆之名</string>
+    <string name="prompt_memory_receiver">寄送给</string>
+    <string name="prompt_add_description">添加描述</string>
 
     <string name="button_login">登陆</string>
     <string name="button_register">第一次</string>
@@ -20,7 +23,11 @@
     <string name="button_yes">是</string>
     <string name="button_no">否</string>
     <string name="button_settings">设置</string>
+    <string name="button_logout">登出</string>
     <string name="button_add_secret">添加</string>
+    <string name="button_post">寄出</string>
+    <string name="button_unlock">解锁</string>
+    <string name="button_ignore">和我无关</string>
 
     <string name="error_network">网络有点问题哦</string>
     <string name="error_exception">出现异常!</string>
@@ -34,6 +41,8 @@
     <string name="error_invalid_date">所选日期不正确!</string>
     <string name="error_select_picture">抱歉，无法选择图片!</string>
     <string name="error_upload_picture">抱歉，图片上传失败!</string>
+    <string name="error_duplicate_des">描述已存在!</string>
+    <string name="error_insufficient_des">抱歉，描述不得少于三个!</string>
 
     <string name="info_press_back_again">再按一次退出程序</string>
     <string name="info_question">对你的问题:</string>
@@ -48,11 +57,15 @@
     <string name="info_add_memory">添加回忆</string>
     <string name="info_add_memory_date">%1$d岁那年</string>
     <string name="info_delete_memory">确定抹去%1$d岁的这段回忆“%2$s”?</string>
-    <string name="info_delete_secret">确定抹去回忆里的这张图片?</string>
+    <string name="info_delete_secret">确定删除这张图片?</string>
     <string name="info_choose_head">请选择一张图片作为头像</string>
     <string name="info_choose_image">选择图片</string>
     <string name="info_choose_image_done">完成 (%1$d张)</string>
     <string name="info_all_image">所有图片</string>
+    <string name="info_memory_sender">来自 %1$s</string>
     <string name="info_memory_author">来自:</string>
     <string name="info_memory_time">于 %1$s</string>
+    <string name="info_post_new_user">让TA加入“不忘”</string>
+    <string name="info_post_lock">可以设定一个问题，来锁住回忆</string>
+    <string name="info_post_lock_required">由于接收者并不确定，必须添加一个问题，来锁住回忆</string>
 </resources>

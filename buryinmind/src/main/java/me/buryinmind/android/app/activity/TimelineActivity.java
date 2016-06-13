@@ -11,15 +11,21 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,6 +33,8 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.daimajia.swipe.SimpleSwipeListener;
+import com.daimajia.swipe.SwipeLayout;
 import com.fourmob.datetimepicker.date.DatePickerDialog;
 import com.qiniu.android.http.ResponseInfo;
 import com.qiniu.android.storage.UpCompletionHandler;
@@ -63,8 +71,11 @@ import me.buryinmind.android.app.dialog.AddMemoryDialog;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
 import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.model.Memory;
+import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
-import me.buryinmind.android.app.uicontrol.ParticleLayout;
+import me.buryinmind.android.app.uicontrol.XLinearLayoutManager;
+import me.buryinmind.android.app.uicontrol.XParticleLayout;
+import me.buryinmind.android.app.uicontrol.XViewHolder;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.FileUtils;
 import me.buryinmind.android.app.util.ImageUtil;
@@ -130,6 +141,9 @@ public class TimelineActivity extends AppCompatActivity {
                 }
             }
         });
+        mTimelineView.setLayoutManager(new XLinearLayoutManager(this,
+                LinearLayoutManager.VERTICAL, false));
+        mTimelineView.setItemAnimator(new DefaultItemAnimator());
         mTimelineView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -179,21 +193,17 @@ public class TimelineActivity extends AppCompatActivity {
                 clickDes(v);
             }
         });
-        showProfilePicture();
+        showProfilePicture(ApiUtil.getIdUrl(user.uid));
 
         // register data listener
         final XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
                 XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
         memorySource.registerListener(new XHandlerIdDataSourceListener<Memory>() {
             @Override
-            public void onReplaceInUI(List<Memory> list, List<Memory> list1) {
-
-            }
+            public void onReplaceInUI(List<Memory> list, List<Memory> list1) {}
 
             @Override
-            public void onChangeInUI() {
-
-            }
+            public void onChangeInUI() {}
 
             @Override
             public void onAddInUI(Memory memory) {
@@ -243,340 +253,50 @@ public class TimelineActivity extends AppCompatActivity {
         return true;
     }
 
-    public void clickToolBar(View view) {
-        if (mCollapsed) {
-            mAppBar.setExpanded(true, true);
-        } else {
-            mAppBar.setExpanded(false, true);
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_logout:
+                XLog.d(TAG, "click logout btn!");
+                MyApplication.getAsyncHttp().execute(
+                        ApiUtil.logoutUser(),
+                        new XAsyncHttp.Listener() {
+                            @Override
+                            public void onNetworkError() {
+                                Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                            }
+
+                            @Override
+                            public void onFinishError(XHttpResponse xHttpResponse) {
+                                Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                            }
+
+                            @Override
+                            public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                                // 清空数据源
+                                MyApplication.clearDataSource();
+                                // 回到登录界面
+                                final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                                        .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+                                Intent intent = new Intent(TimelineActivity.this, LoginActivity.class);
+                                intent.putExtra(LoginActivity.RE_LOGIN, user.name);
+                                startActivity(intent);
+                                finish();
+                            }
+                        });
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 
-    public void clickHead(View view) {
-        // 选择图片，并上传
-        Intent target = FileUtils.createGetContentIntent();
-        Intent intent = Intent.createChooser(target, this.getString(R.string.info_choose_head));
-        try {
-            startActivityForResult(intent, HEADER_REQUEST_CODE);
-        } catch (ActivityNotFoundException ex) {
-            Toast.makeText(this, getString(R.string.error_select_picture),
-                    Toast.LENGTH_LONG).show();
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (this.getCurrentFocus() != null){
+            // 点击空白位置 隐藏软键盘
+            ViewUtil.hidInputMethod(this);
         }
-    }
-
-    public void clickDes(View view) {
-        // TODO 修改描述
-    }
-
-    public void clickBirthBtn(View view) {
-        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        showDatePicker(Calendar.getInstance(), new DatePickerDialog.OnDateSetListener() {
-            @Override
-            public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
-                Calendar birthCal = Calendar.getInstance();
-                birthCal.set(year, month, day);
-                // 统一改成GMT时区,再上传服务器
-                birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
-                final long bornTime = birthCal.getTimeInMillis();
-                updateBornTime(user.uid, bornTime, new ResultListener() {
-                    @Override
-                    public void onResult(boolean result, Object data) {
-                        if (result) {
-                            user.bornTime = bornTime;
-                            // 生成时间线
-                            showTimeline();
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    public void clickAddMemoryBtn(View view) {
-        if (!mAddingMemory) {
-            mAddingMemory = true;
-            Animation animation = AnimationUtils.loadAnimation(TimelineActivity.this, R.anim.rotate_start);
-            animation.setFillAfter(true);
-            mAddBtn.startAnimation(animation);
-            AddMemoryDialog.newInstance(new DialogListener() {
-                @Override
-                public void onDone(Object... result) {
-                    String name = (String) result[0];
-                    Calendar date = (Calendar) result[1];
-                    // 统一改成GMT时区,再上传服务器
-                    date.setTimeZone(TimeZone.getTimeZone("GMT"));
-                    addMemory(name, date.getTimeInMillis());
-                }
-
-                @Override
-                public void onDismiss() {
-                    mAddingMemory = false;
-                    Animation animation = AnimationUtils.loadAnimation(TimelineActivity.this, R.anim.rotate_back);
-                    animation.setFillAfter(true);
-                    mAddBtn.startAnimation(animation);
-                }
-            }).show(getSupportFragmentManager(), AddMemoryDialog.TAG);
-        }
-    }
-
-    private void showProgress(final boolean show) {
-        ViewUtil.animateFadeInOut(mContentView, show);
-        ViewUtil.animateFadeInOut(mProgressView, !show);
-    }
-
-    private DialogFragment showDatePicker(Calendar initCal, DatePickerDialog.OnDateSetListener listener) {
-        if (initCal == null) {
-            initCal = Calendar.getInstance();
-        }
-        DatePickerDialog datePickerDialog = DatePickerDialog.newInstance(listener,
-                initCal.get(Calendar.YEAR), initCal.get(Calendar.MONTH),
-                initCal.get(Calendar.DAY_OF_MONTH), false);
-        datePickerDialog.setYearRange(1902, Calendar.getInstance().get(Calendar.YEAR));
-        datePickerDialog.show(getSupportFragmentManager(), TAG_DATE_PICKER);
-        return datePickerDialog;
-    }
-
-
-    private void showProfilePicture() {
-        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        showProfilePicture(ApiUtil.getIdUrl(user.uid));
-    }
-
-    private void showProfilePicture(String url) {
-        XLog.d(TAG, "showProfilePicture(). head_url=" + url);
-        Glide.with(TimelineActivity.this)
-                .load(url)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .priority(Priority.HIGH)
-                .error(R.drawable.profile_default)
-                .into(mProfileBackground);
-        Glide.with(TimelineActivity.this)
-                .load(url)
-                .dontAnimate()
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .error(R.drawable.headicon_default)
-                .into(mAccountHeadView);
-    }
-
-    private void showTimeline() {
-        // 生成时间线
-        mBirthdayView.setVisibility(View.GONE);
-        mTimelineView.setVisibility(View.VISIBLE);
-        mAddBtn.setVisibility(View.VISIBLE);
-        // init list adapter
-        XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
-                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
-        mAdapter = new TimelineAdapter(memorySource.copyAll());
-        mTimelineView.setAdapter(mAdapter);
-        mTimelineView.setItemAnimator(new DefaultItemAnimator());
-        // request memory data
-        requestMemoryList();
-    }
-
-    private void requestMemoryList() {
-        if (mWaiting)
-            return;
-        mWaiting = true;
-        showProgress(true);
-        User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.getMemoryList(user.uid),
-                new XJsonArrayHandler(),
-                new XAsyncHttp.Listener<JSONArray>() {
-                    @Override
-                    public void onNetworkError() {
-                        mWaiting = false;
-                        showProgress(false);
-                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        mWaiting = false;
-                        showProgress(false);
-                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray jsonArray) {
-                        mWaiting = false;
-                        showProgress(false);
-                        List<Memory> memories = Memory.fromJson(jsonArray);
-                        XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
-                                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
-                        source.addAll(memories);
-                        source.sort(Memory.comparator);
-                    }
-                });
-    }
-
-    private void addMemory(String memoryName, long happenTime) {
-        if (mWaiting)
-            return;
-        mWaiting = true;
-        User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.addMemory(user.uid, memoryName, happenTime),
-                new XJsonObjectHandler(),
-                new XAsyncHttp.Listener<JSONObject>() {
-                    @Override
-                    public void onNetworkError() {
-                        mWaiting = false;
-                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        mWaiting = false;
-                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
-                        mWaiting = false;
-                        Memory memory = Memory.fromJson(jsonObject);
-                        if (memory != null) {
-                            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
-                                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
-                            source.add(memory);
-                            source.sort(Memory.comparator);
-                        }
-                    }
-                }
-        );
-    }
-
-    private void deleteMemory(final Memory memory) {
-        if (mWaiting)
-            return;
-        mWaiting = true;
-        User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.deleteMemory(user.uid, memory.mid),
-                new XAsyncHttp.Listener() {
-                    @Override
-                    public void onNetworkError() {
-                        XLog.d(TAG, "deleteMemory onNetworkError()! mid=" + memory.mid);
-                        mWaiting = false;
-                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                        mAdapter.resetData(memory);
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        XLog.d(TAG, "deleteMemory onFinishError()! mid=" + memory.mid);
-                        mWaiting = false;
-                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        mAdapter.resetData(memory);
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object obj) {
-                        XLog.d(TAG, "deleteMemory onFinishSuccess()! mid=" + memory.mid);
-                        mWaiting = false;
-                        XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
-                                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
-                        source.deleteById(memory.mid);
-                    }
-                }
-        );
-    }
-
-    private void updateBornTime(String uid, long bornTime, final ResultListener listener) {
-        if (mWaiting)
-            return;
-        mWaiting = true;
-        showProgress(true);
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.updateBornTime(uid, bornTime),
-                new XAsyncHttp.Listener() {
-                    @Override
-                    public void onNetworkError() {
-                        mWaiting = false;
-                        showProgress(false);
-                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                        if (listener != null) {
-                            listener.onResult(false, null);
-                        }
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        mWaiting = false;
-                        showProgress(false);
-                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        if (listener != null) {
-                            listener.onResult(false, null);
-                        }
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
-                        mWaiting = false;
-                        showProgress(false);
-                        if (listener != null) {
-                            listener.onResult(true, null);
-                        }
-                    }
-                });
-    }
-
-    private void uploadHeadPicture(final String filePath, final boolean needDelete) {
-        // 从业务服务器获取上传凭证
-        final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.getHeadToken(user.uid),
-                new XJsonObjectHandler(),
-                new XAsyncHttp.Listener<JSONObject>() {
-                    @Override
-                    public void onNetworkError() {
-                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
-                        try {
-                            final String token = jsonObject.getString("up");
-                            // 真正开始上传
-                            MyApplication.getUploadManager().put(filePath, user.uid, token,
-                                    new UpCompletionHandler() {
-                                        @Override
-                                        public void complete(String key, ResponseInfo info, JSONObject response) {
-                                            XLog.d(TAG, "upload complete! " + info.toString());
-                                            if (info.isOK()) {
-                                                XLog.d(TAG, "upload success!");
-                                                MyApplication.updateImageTimestamp();// 更新图片时间戳
-                                                showProfilePicture(filePath);
-                                                if (needDelete) {
-                                                    new File(filePath).deleteOnExit();
-                                                }
-                                            } else {
-                                                Toast.makeText(TimelineActivity.this, R.string.error_upload_picture,
-                                                        Toast.LENGTH_SHORT).show();
-                                            }
-                                        }
-                                    },
-                                    new UploadOptions(null, null, false,
-                                            new UpProgressHandler() {
-                                                public void progress(String key, double percent) {
-                                                    XLog.d(TAG, "progress. " + key + ": " + percent);
-                                                }
-                                            }, null));
-                        } catch (JSONException e) {
-                            Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
+        return super .onTouchEvent(event);
     }
 
     @Override
@@ -642,12 +362,422 @@ public class TimelineActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    public void clickToolBar(View view) {
+        if (mCollapsed) {
+            mAppBar.setExpanded(true, true);
+        } else {
+            mAppBar.setExpanded(false, true);
+        }
+    }
 
-    private class TimelineAdapter extends RecyclerView.Adapter<TimelineAdapter.ViewHolder> {
+    public void clickHead(View view) {
+        // 选择图片，并上传
+        Intent target = FileUtils.createGetContentIntent();
+        Intent intent = Intent.createChooser(target, this.getString(R.string.info_choose_head));
+        try {
+            startActivityForResult(intent, HEADER_REQUEST_CODE);
+        } catch (ActivityNotFoundException ex) {
+            Toast.makeText(this, getString(R.string.error_select_picture),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void clickDes(View view) {
+        // TODO 修改描述
+    }
+
+    public void clickBirthBtn(View view) {
+        showDatePicker(Calendar.getInstance(), new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
+                Calendar birthCal = Calendar.getInstance();
+                birthCal.set(year, month, day);
+                // 统一改成GMT时区,再上传服务器
+                birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
+                final long bornTime = birthCal.getTimeInMillis();
+                updateBornTime(bornTime, new ResultListener() {
+                    @Override
+                    public void onResult(boolean result, Object data) {
+                        if (result) {
+                            User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                                    .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+                            user.bornTime = bornTime;
+                            // 生成时间线
+                            showTimeline();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    public void clickAddMemoryBtn(View view) {
+        if (!mAddingMemory) {
+            mAddingMemory = true;
+            Animation animation = AnimationUtils.loadAnimation(TimelineActivity.this, R.anim.rotate_start);
+            animation.setFillAfter(true);
+            mAddBtn.startAnimation(animation);
+            AddMemoryDialog.newInstance(new DialogListener() {
+                @Override
+                public void onDone(Object... result) {
+                    String name = (String) result[0];
+                    Calendar date = (Calendar) result[1];
+                    // 统一改成GMT时区,再上传服务器
+                    date.setTimeZone(TimeZone.getTimeZone("GMT"));
+                    addMemory(name, date.getTimeInMillis());
+                }
+
+                @Override
+                public void onDismiss() {
+                    mAddingMemory = false;
+                    Animation animation = AnimationUtils.loadAnimation(TimelineActivity.this, R.anim.rotate_back);
+                    animation.setFillAfter(true);
+                    mAddBtn.startAnimation(animation);
+                }
+            }).show(getSupportFragmentManager(), AddMemoryDialog.TAG);
+        }
+    }
+
+    private void showProgress(final boolean show) {
+        ViewUtil.animateFadeInOut(mContentView, show);
+        ViewUtil.animateFadeInOut(mProgressView, !show);
+    }
+
+    private DialogFragment showDatePicker(Calendar initCal, DatePickerDialog.OnDateSetListener listener) {
+        if (initCal == null) {
+            initCal = Calendar.getInstance();
+        }
+        DatePickerDialog datePickerDialog = DatePickerDialog.newInstance(listener,
+                initCal.get(Calendar.YEAR), initCal.get(Calendar.MONTH),
+                initCal.get(Calendar.DAY_OF_MONTH), false);
+        datePickerDialog.setYearRange(1902, Calendar.getInstance().get(Calendar.YEAR));
+        datePickerDialog.show(getSupportFragmentManager(), TAG_DATE_PICKER);
+        return datePickerDialog;
+    }
+
+    private void showProfilePicture(String url) {
+        XLog.d(TAG, "showProfilePicture(). head_url=" + url);
+        Glide.with(TimelineActivity.this)
+                .load(url)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .priority(Priority.HIGH)
+                .error(R.drawable.profile_default)
+                .into(mProfileBackground);
+        Glide.with(TimelineActivity.this)
+                .load(url)
+                .dontAnimate()
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .error(R.drawable.headicon_default)
+                .into(mAccountHeadView);
+    }
+
+    private void showTimeline() {
+        // 生成时间线
+        mBirthdayView.setVisibility(View.GONE);
+        mTimelineView.setVisibility(View.VISIBLE);
+        mAddBtn.setVisibility(View.VISIBLE);
+        // init list adapter
+        XListIdDataSourceImpl<Memory> memorySource = (XListIdDataSourceImpl<Memory>)
+                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+        mAdapter = new TimelineAdapter(memorySource.copyAll());
+        mTimelineView.setAdapter(mAdapter);
+        // request memory data
+        requestMemoryList();
+    }
+
+    private void updateBornTime(long bornTime, final ResultListener listener) {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        showProgress(true);
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.updateBornTime(bornTime),
+                new XAsyncHttp.Listener() {
+                    @Override
+                    public void onNetworkError() {
+                        mWaiting = false;
+                        showProgress(false);
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        if (listener != null) {
+                            listener.onResult(false, null);
+                        }
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
+                        showProgress(false);
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        if (listener != null) {
+                            listener.onResult(false, null);
+                        }
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                        mWaiting = false;
+                        showProgress(false);
+                        if (listener != null) {
+                            listener.onResult(true, null);
+                        }
+                    }
+                });
+    }
+
+    private void uploadHeadPicture(final String filePath, final boolean needDelete) {
+        // 从业务服务器获取上传凭证
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.getHeadToken(),
+                new XJsonObjectHandler(),
+                new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
+                        try {
+                            final String token = jsonObject.getString("up");
+                            final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                                    .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+                            // 真正开始上传
+                            MyApplication.getUploadManager().put(filePath, user.uid, token,
+                                    new UpCompletionHandler() {
+                                        @Override
+                                        public void complete(String key, ResponseInfo info, JSONObject response) {
+                                            XLog.d(TAG, "upload complete! " + info.toString());
+                                            if (info.isOK()) {
+                                                XLog.d(TAG, "upload success!");
+                                                MyApplication.updateImageTimestamp();// 更新图片时间戳
+                                                showProfilePicture(filePath);
+                                                if (needDelete) {
+                                                    new File(filePath).deleteOnExit();
+                                                }
+                                            } else {
+                                                Toast.makeText(TimelineActivity.this, R.string.error_upload_picture,
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    },
+                                    new UploadOptions(null, null, false,
+                                            new UpProgressHandler() {
+                                                public void progress(String key, double percent) {
+                                                    XLog.d(TAG, "progress. " + key + ": " + percent);
+                                                }
+                                            }, null));
+                        } catch (JSONException e) {
+                            Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
+    private void requestMemoryList() {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        showProgress(true);
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.getMemoryList(),
+                new XJsonArrayHandler(),
+                new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onNetworkError() {
+                        mWaiting = false;
+                        showProgress(false);
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
+                        showProgress(false);
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray jsonArray) {
+                        mWaiting = false;
+                        showProgress(false);
+                        List<Memory> memories = Memory.fromJson(jsonArray);
+                        if (memories != null && memories.size() > 0) {
+                            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                            source.addAll(memories);
+                            source.sort(Memory.comparator);
+                        }
+                        // 获取待接收列表
+                        inboxMemory();
+                    }
+                });
+    }
+
+    private void addMemory(String memoryName, long happenTime) {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.addMemory(memoryName, happenTime),
+                new XJsonObjectHandler(),
+                new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onNetworkError() {
+                        mWaiting = false;
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
+                        mWaiting = false;
+                        Memory memory = Memory.fromJson(jsonObject);
+                        if (memory != null) {
+                            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                            source.add(memory);
+                            source.sort(Memory.comparator);
+                        }
+                    }
+                }
+        );
+    }
+
+    private void deleteMemory(final Memory memory) {
+        if (mWaiting)
+            return;
+        mWaiting = true;
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.deleteMemory(memory.mid),
+                new XAsyncHttp.Listener() {
+                    @Override
+                    public void onNetworkError() {
+                        XLog.d(TAG, "deleteMemory onNetworkError()! mid=" + memory.mid);
+                        mWaiting = false;
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                        mAdapter.resetData(memory);
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        XLog.d(TAG, "deleteMemory onFinishError()! mid=" + memory.mid);
+                        mWaiting = false;
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        mAdapter.resetData(memory);
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object obj) {
+                        XLog.d(TAG, "deleteMemory onFinishSuccess()! mid=" + memory.mid);
+                        mWaiting = false;
+                        XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                        source.deleteById(memory.mid);
+                    }
+                }
+        );
+    }
+
+    private void inboxMemory() {
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.inMemory(),
+                new XJsonObjectHandler(),
+                new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
+                        List<Memory> paMemories = null;
+                        List<Memory> pbMemories = null;
+                        try {
+                            if (jo.has("pa") && !jo.isNull("pa")) {
+                                JSONArray pa = jo.getJSONArray("pa");
+                                paMemories = Memory.fromGiftJson(pa);
+                            }
+                            if (jo.has("pb") && !jo.isNull("pb")) {
+                                JSONArray pb = jo.getJSONArray("pb");
+                                pbMemories = Memory.fromGiftJson(pb);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        List<Memory> inMemories = new ArrayList<Memory>();
+                        if (paMemories != null && paMemories.size() > 0) {
+                            inMemories.addAll(paMemories);
+                        }
+                        if (pbMemories != null && pbMemories.size() > 0) {
+                            inMemories.addAll(pbMemories);
+                        }
+                        if (inMemories.size() > 0) {
+                            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                            source.addAll(inMemories);
+                            source.sort(Memory.comparator);
+                        }
+                    }
+                });
+    }
+
+    private void receiveMemory(final Memory memory, String gid, String answer) {
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.receiveMemory(gid, answer),
+                new XJsonObjectHandler(),
+                new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                    }
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                    }
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
+                        try {
+                            String newMemoryId = jo.getString("mid");
+                            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                            source.delete(memory);
+                            memory.mid = newMemoryId;
+                            memory.inGift = null;
+                            final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                                    .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
+                            memory.ownerId = user.uid;
+                            memory.ownerName = user.name;
+                            source.add(memory);
+                            source.sort(Memory.comparator);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+    }
+
+    private class TimelineAdapter extends RecyclerView.Adapter<XViewHolder> {
 
         private static final int TYPE_HEADER = 1;
         private static final int TYPE_FOOTER = 2;
         private static final int TYPE_NODE = 3;
+
+        private static final String KEY_LISTENER = "swipeLayoutListener";
 
         private Map<Integer, Memory> mAges;
         private List<Memory> mItems;
@@ -730,7 +860,7 @@ public class TimelineActivity extends AppCompatActivity {
         }
 
         @Override
-        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             int resId;
             if (viewType == TYPE_HEADER)
                 resId = R.layout.item_timeline_header;
@@ -740,117 +870,240 @@ public class TimelineActivity extends AppCompatActivity {
                 resId = R.layout.item_timeline_node;
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(resId, parent, false);
-            return new ViewHolder(view, viewType);
+            return new XViewHolder(view);
         }
 
         @Override
-        public void onBindViewHolder(final ViewHolder holder, int position) {
+        public void onBindViewHolder(final XViewHolder holder, final int position) {
             int type = getItemViewType(position);
+            final User user = ((GlobalSource) XDefaultDataRepo.getInstance().
+                    getSource(MyApplication.SOURCE_GLOBAL)).getUser();
             if (type == TYPE_HEADER) {
-                holder.mBornLayout.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-                        final User user = source.getUser();
-                        Calendar lastBornTime = TimeUtil.getCalendar(user.bornTime);
-                        showDatePicker(lastBornTime, new DatePickerDialog.OnDateSetListener() {
+                holder.getView(R.id.timeline_header_layout).setOnClickListener(
+                        new View.OnClickListener() {
                             @Override
-                            public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
-                                Calendar birthCal = Calendar.getInstance();
-                                birthCal.set(year, month, day);
-                                // 统一改成GMT时区,再上传服务器
-                                birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
-                                final long bornTime = birthCal.getTimeInMillis();
-                                updateBornTime(user.uid, bornTime, new ResultListener() {
+                            public void onClick(View v) {
+                                Calendar lastBornTime = TimeUtil.getCalendar(user.bornTime);
+                                showDatePicker(lastBornTime, new DatePickerDialog.OnDateSetListener() {
                                     @Override
-                                    public void onResult(boolean result, Object data) {
-                                        if (result) {
-                                            user.bornTime = bornTime;
-                                            mAdapter.notifyDataSetChanged();
-                                        }
+                                    public void onDateSet(DatePickerDialog datePickerDialog, int year, int month, int day) {
+                                        Calendar birthCal = Calendar.getInstance();
+                                        birthCal.set(year, month, day);
+                                        // 统一改成GMT时区,再上传服务器
+                                        birthCal.setTimeZone(TimeZone.getTimeZone("GMT"));
+                                        final long bornTime = birthCal.getTimeInMillis();
+                                        updateBornTime(bornTime, new ResultListener() {
+                                            @Override
+                                            public void onResult(boolean result, Object data) {
+                                                if (result) {
+                                                    user.bornTime = bornTime;
+                                                    mAdapter.notifyDataSetChanged();
+                                                }
+                                            }
+                                        });
                                     }
                                 });
                             }
                         });
-                    }
-                });
-                GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-                User user = source.getUser();
-                holder.mBornView.setText(XStringUtil.calendar2str(TimeUtil.getCalendar(user.bornTime), "."));
+                holder.getView(R.id.timeline_header_time, TextView.class)
+                        .setText(XStringUtil.calendar2str(TimeUtil.getCalendar(user.bornTime), "."));
             } else if (type == TYPE_FOOTER) {
-                holder.mFooterView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        mAddBtn.performClick();
-                    }
-                });
+                holder.getView(R.id.timeline_footer_txt).setOnClickListener(
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                mAddBtn.performClick();
+                            }
+                        });
             } else {
                 final Memory item = mItems.get(position - 1);
                 if (item.age > 0 && mAges.get(item.age).equals(item)) {
-                    holder.mAgeView.setText(String.valueOf(item.age));
-                    holder.mAgeLayout.setVisibility(View.VISIBLE);
+                    holder.getView(R.id.timeline_tag, TextView.class)
+                            .setText(String.valueOf(item.age));
+                    holder.getView(R.id.timeline_tag_layout).setVisibility(View.VISIBLE);
                 }else {
-                    holder.mAgeLayout.setVisibility(View.GONE);
+                    holder.getView(R.id.timeline_tag_layout).setVisibility(View.GONE);
                 }
+                // 如果不是自己的回忆,显示赠送者头像
+                if (!user.uid.equals(item.authorId)) {
+                    holder.getView(R.id.timeline_sender_head).setVisibility(View.VISIBLE);
+                    Glide.with(TimelineActivity.this)
+                            .load(ApiUtil.getIdUrl(item.authorId))
+                            .dontAnimate()
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .error(R.drawable.headicon_default)
+                            .into(holder.getView(R.id.timeline_sender_head, ImageView.class));
+                    if (item.inGift != null) {// 如果是未接收的回忆，则头像闪动提醒
+                        ViewUtil.animateScale(holder.getView(R.id.timeline_sender_head));
+                    } else {
+                        holder.getView(R.id.timeline_sender_head).setAnimation(null);
+                    }
+                } else {
+                    holder.getView(R.id.timeline_sender_head).setVisibility(View.GONE);
+                    holder.getView(R.id.timeline_sender_head).setAnimation(null);
+                }
+                final XParticleLayout particleLayout = (XParticleLayout) holder.getView(R.id.timeline_node_layout);
                 if (mToBeDelete.contains(item)) {
                     // 正在删除的条目，不显示内容，也不能点击
-                    holder.mMemoryLayout.hide();
-                    holder.mMemoryLayout.setOnClickListener(null);
+                    particleLayout.hide();
+                    particleLayout.setOnClickListener(null);
                 } else {
-                    holder.mMemoryNameView.setText(item.name);
-                    holder.mMemoryDateView.setText(XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenTime), "."));
-                    if (item.secrets != null && item.secrets.size() > 0) {
-                        holder.mMemoryImageLayout.setVisibility(View.VISIBLE);
-//                    holder.mMemoryImage// TODO 加载图片
+                    holder.getView(R.id.timeline_node_txt, TextView.class).setText(item.name);
+                    holder.getView(R.id.timeline_node_date, TextView.class).setText(
+                            XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenTime), "."));
+                    ImageView memoryImage = (ImageView) holder.getView(R.id.timeline_node_img);
+                    if (!XStringUtil.isEmpty(item.coverUrl)) {
+                        memoryImage.setVisibility(View.VISIBLE);
+                        Glide.with(TimelineActivity.this)
+                                .load(item.coverUrl)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .placeholder(R.color.darkGray)
+                                .error(R.color.darkGray)
+                                .into(memoryImage);
                     } else {
-                        holder.mMemoryImageLayout.setVisibility(View.GONE);
+                        memoryImage.setVisibility(View.GONE);
                     }
-                    holder.mMemoryLayout.setParticle(R.drawable.particle_star);
-                    holder.mMemoryLayout.reset();
-                    holder.mMemoryLayout.setListener(new ParticleLayout.Listener() {
+                    // 设置粒子效果图层
+                    particleLayout.setParticle(R.drawable.particle_star);
+                    particleLayout.reset();
+                    particleLayout.setListener(new XParticleLayout.Listener() {
                         @Override
                         public void onStart() {
                         }
+
                         @Override
                         public void onEnd() {
-                            GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-                            final User user = source.getUser();
+                            final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
+                                    .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
                             ConfirmDialog.newInstance(
                                     String.format(getResources().getString(R.string.info_delete_memory),
                                             TimeUtil.calculateAge(user.bornTime, item.happenTime),
                                             item.name),
                                     new DialogListener() {
                                         boolean confirm = false;
+
                                         @Override
                                         public void onDone(Object... result) {
                                             confirm = (boolean) result[0];
                                             if (confirm) {
                                                 mToBeDelete.add(item);
-                                                holder.mMemoryLayout.setOnClickListener(null);
+                                                particleLayout.setOnClickListener(null);
                                                 deleteMemory(item);
                                             }
                                         }
+
                                         @Override
                                         public void onDismiss() {
                                             if (!confirm) {
-                                                holder.mMemoryLayout.reset();
+                                                particleLayout.reset();
                                             }
                                         }
-                                    }).show(getSupportFragmentManager(), ConfirmDialog.TAG);
+                                    }).show(getFragmentManager(), ConfirmDialog.TAG);
                         }
+
                         @Override
                         public void onCancelled() {
                         }
                     });
-                    holder.mMemoryLayout.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            Toast.makeText(TimelineActivity.this, "点击Memory:" + item.name, Toast.LENGTH_SHORT).show();
-                            Intent intent = new Intent(TimelineActivity.this, MemoryDetailActivity.class);
-                            intent.putExtra("mid", item.mid);
-                            startActivity(intent);
+                    XLog.d(TAG, "onBindViewHolder. position=" + position);
+                    final SwipeLayout swipeLayout = (SwipeLayout) holder.getView(R.id.timeline_node_swipe_layout);
+                    // 是自己的或已接收的回忆
+                    if (item.inGift == null) {
+                        holder.getView(R.id.timeline_sender_name).setVisibility(View.GONE);
+                        holder.getView(R.id.timeline_node_lock).setVisibility(View.GONE);
+                        holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.GONE);
+                        swipeLayout.setSwipeEnabled(false);
+                        swipeLayout.removeSwipeListener(holder.getTag(KEY_LISTENER, MySwipeListener.class));
+                        holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        Intent intent = new Intent(TimelineActivity.this, MemoryDetailActivity.class);
+                                        intent.putExtra("mid", item.mid);
+                                        startActivity(intent);
+                                    }
+                                });
+                    }
+                    // 是未接收的回忆
+                    else {
+                        holder.getView(R.id.timeline_sender_name).setVisibility(View.VISIBLE);
+                        holder.getView(R.id.timeline_sender_name, TextView.class).setText(
+                                String.format(getResources().getString(R.string.info_memory_sender),
+                                        item.inGift.senderName));
+                        // 没有设锁的回忆
+                        if (XStringUtil.isEmpty(item.inGift.question)) {
+                            holder.getView(R.id.timeline_node_lock).setVisibility(View.GONE);
+                            holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.GONE);
+                            swipeLayout.setSwipeEnabled(false);
+                            swipeLayout.removeSwipeListener(holder.getTag(KEY_LISTENER, MySwipeListener.class));
+                            holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
+                                    new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            // TODO 第一次点击进去表示接收回忆,通知服务器
+                                            Intent intent = new Intent(TimelineActivity.this, MemoryDetailActivity.class);
+                                            intent.putExtra("mid", item.mid);
+                                            startActivity(intent);
+                                        }
+                                    });
                         }
-                    });
+                        // 有设锁的回忆
+                        else {
+                            holder.getView(R.id.timeline_node_lock).setVisibility(View.VISIBLE);
+                            holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.VISIBLE);
+                            swipeLayout.setSwipeEnabled(true);
+                            // 设置滑动图层
+                            MySwipeListener sListener = holder.getTag(KEY_LISTENER, MySwipeListener.class);
+                            if (sListener == null) {
+                                sListener = new MySwipeListener(particleLayout);
+                            } else {
+                                sListener.setParticleLayout(particleLayout);
+                            }
+                            swipeLayout.addSwipeListener(sListener);
+                            holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
+                                    new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            // 显示问题
+                                            swipeLayout.toggle(true);
+                                        }
+                                    });
+                            final EditText answerInput = (EditText) holder.getView(R.id.timeline_node_answer_input);
+                            holder.getView(R.id.timeline_node_question, TextView.class).setText(item.inGift.question);
+                            holder.getView(R.id.timeline_node_unlock_btn).setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    String answer = answerInput.getText().toString().trim();
+                                    if (XStringUtil.isEmpty(answer)) {
+                                        answerInput.setError(getString(R.string.error_field_required));
+                                        answerInput.requestFocus();
+                                        return;
+                                    }
+                                    swipeLayout.toggle(true);
+                                    // TODO 解锁并接收Memory
+                                    receiveMemory(item, item.inGift.gid, answer);
+                                }
+                            });
+                            holder.getView(R.id.timeline_node_ignore_btn).setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    // TODO 忽略此Memory
+                                    swipeLayout.toggle(true);
+                                }
+                            });
+                            answerInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+                                @Override
+                                public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
+                                    if (id == EditorInfo.IME_ACTION_GO) {
+                                        ViewUtil.hidInputMethod(TimelineActivity.this);
+                                        holder.getView(R.id.timeline_node_unlock_btn).performClick();
+                                        return true;
+                                    }
+                                    return false;
+                                }
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -859,40 +1112,33 @@ public class TimelineActivity extends AppCompatActivity {
         public int getItemCount() {
             return mItems.size() + 2;
         }
+    }
 
-        public class ViewHolder extends RecyclerView.ViewHolder {
-            public final View mView;
-            public View mBornLayout;
-            public TextView mBornView;
-            public View mAgeLayout;
-            public TextView mAgeView;
-            public TextView mAgeDesView;
-            public ParticleLayout mMemoryLayout;
-            public TextView mMemoryNameView;
-            public TextView mMemoryDateView;
-            public View mMemoryImageLayout;
-            public ImageView mMemoryImage;
-            public View mFooterView;
+    private class MySwipeListener extends SimpleSwipeListener {
+        XParticleLayout pLayout;
 
-            public ViewHolder(View view, int viewType) {
-                super(view);
-                mView = view;
-                if (viewType == TYPE_HEADER) {
-                    mBornLayout = view.findViewById(R.id.timeline_header_layout);
-                    mBornView = (TextView) view.findViewById(R.id.timeline_header_time);
-                } else if (viewType == TYPE_FOOTER) {
-                    mFooterView = view.findViewById(R.id.timeline_footer_txt);
-                } else {
-                    mAgeLayout = view.findViewById(R.id.timeline_tag_layout);
-                    mAgeView = (TextView) view.findViewById(R.id.timeline_tag);
-                    mAgeDesView = (TextView) view.findViewById(R.id.timeline_tag_txt);
-                    mMemoryLayout = (ParticleLayout) view.findViewById(R.id.timeline_node_layout);
-                    mMemoryNameView = (TextView) view.findViewById(R.id.timeline_node_txt);
-                    mMemoryDateView = (TextView) view.findViewById(R.id.timeline_node_date);
-                    mMemoryImageLayout = view.findViewById(R.id.timeline_node_img_layout);
-                    mMemoryImage = (ImageView) view.findViewById(R.id.timeline_node_img);
-                }
+        public MySwipeListener(XParticleLayout pLayout) {
+            this.pLayout = pLayout;
+        }
+
+        public void setParticleLayout(XParticleLayout pLayout) {
+            this.pLayout = pLayout;
+        }
+
+        @Override
+        public void onOpen(SwipeLayout layout) {
+            XLog.d(TAG, "滑开图层，禁止粒子效果");
+            if (pLayout != null) {
+                pLayout.setEnable(false);
             }
         }
-    }
+
+        @Override
+        public void onClose(SwipeLayout layout) {
+            XLog.d(TAG, "隐藏图层，恢复粒子效果");
+            if (pLayout != null) {
+                pLayout.setEnable(true);
+            }
+        }
+    };
 }

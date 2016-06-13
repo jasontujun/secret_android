@@ -11,11 +11,13 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.widget.FrameLayout;
 
+import com.tj.xengine.android.utils.XLog;
+
 
 /**
  * 滑动时带粒子效果的FrameLayout.
  */
-public class ParticleLayout extends FrameLayout {
+public class XParticleLayout extends FrameLayout {
 
     public interface Listener {
         void onStart();
@@ -39,6 +41,7 @@ public class ParticleLayout extends FrameLayout {
 
     private ViewGroup backLayout;
 
+    private boolean isEnable = true;
     private boolean isSwipe = false;
     private boolean isHide = false;
     private Orientation mOrientation;
@@ -49,17 +52,17 @@ public class ParticleLayout extends FrameLayout {
     private Rect contentRect;
     private int mParticleBitmap;
     private Listener mListener;
-    private ParticleSystemExt particleSystem;
+    private XParticleSystem particleSystem;
 
-    public ParticleLayout(Context context) {
+    public XParticleLayout(Context context) {
         this(context, null);
     }
 
-    public ParticleLayout(Context context, AttributeSet attrs) {
+    public XParticleLayout(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public ParticleLayout(Context context, AttributeSet attrs, int defStyleAttr) {
+    public XParticleLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         contentRect = new Rect();
         contentLocation = new int[2];
@@ -89,12 +92,6 @@ public class ParticleLayout extends FrameLayout {
                 contentLocation[0] + backLayout.getMeasuredWidth(),
                 contentLocation[1] + backLayout.getMeasuredHeight());
     }
-
-    @Override
-    public boolean onInterceptTouchEvent(MotionEvent ev) {
-        return true;
-    }
-
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
@@ -176,17 +173,29 @@ public class ParticleLayout extends FrameLayout {
     }
 
     @Override
+    public boolean onInterceptTouchEvent(MotionEvent event) {
+        XLog.d("ParticleLayout", "onInterceptTouchEvent.e=" + event);
+        if (!isEnable || isHide) {
+            return false;
+        }
+        if (checkStart(event)) {
+            isSwipe = true;
+        }
+        return isSwipe;
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (isHide) {
+        XLog.d("ParticleLayout", "onTouchEvent.e=" + event);
+        if (!isEnable || isHide) {
             // 已经隐藏的item，不再触发滑动粒子效果
             return super.onTouchEvent(event);
         }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                if (checkStart(event)) {
-                    isSwipe = true;
+                if (isSwipe) {
                     if (mParticleBitmap > 0) {
-                        particleSystem = new ParticleSystemExt((Activity) getContext(),
+                        particleSystem = new XParticleSystem((Activity) getContext(),
                                 COUNT_OF_PARTICLE_BITMAP, mParticleBitmap, TIME_TO_LIVE);
                         particleSystem.setAcceleration(0.00013f, 90)
                                 .setSpeedByComponentsRange(0f, 0.3f, 0.05f, 0.3f)
@@ -260,6 +269,14 @@ public class ParticleLayout extends FrameLayout {
         }
 
         return isSwipe || super.onTouchEvent(event);
+    }
+
+    public void setEnable(boolean enable) {
+        isEnable = enable;
+    }
+
+    public boolean isEnable() {
+        return isEnable;
     }
 
     public void hide() {

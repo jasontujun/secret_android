@@ -18,6 +18,7 @@ import java.util.List;
 
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.ImageFolder;
+import me.buryinmind.android.app.uicontrol.XListAdapter;
 import me.buryinmind.android.app.uicontrol.XViewHolder;
 
 public class DirPopupWindow extends PopupWindow {
@@ -62,23 +63,15 @@ public class DirPopupWindow extends PopupWindow {
     }
 
 
-    private class DirAdapter extends RecyclerView.Adapter<XViewHolder> {
+    private class DirAdapter extends XListAdapter<ImageFolder> {
 
-        private List<ImageFolder> mData;
-
-        public DirAdapter(List<ImageFolder> data) {
-            mData = data;
-        }
-
-        @Override
-        public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            return new XViewHolder(LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_dir, parent, false));
+        public DirAdapter(List<ImageFolder> items) {
+            super(R.layout.item_dir, items);
         }
 
         @Override
         public void onBindViewHolder(XViewHolder holder, int position) {
-            final ImageFolder item = mData.get(position);
+            final ImageFolder item = getData().get(position);
             holder.getView(R.id.dir_item_name, TextView.class).setText(item.getName());
             holder.getView(R.id.dir_item_count, TextView.class).setText("(" + item.getCount() + ")");
             Glide.with(mContext)
@@ -94,11 +87,6 @@ public class DirPopupWindow extends PopupWindow {
                     }
                 }
             });
-        }
-
-        @Override
-        public int getItemCount() {
-            return mData.size();
         }
 
     }

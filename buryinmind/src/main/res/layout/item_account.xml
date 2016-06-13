@@ -12,18 +12,32 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-        <de.hdodenhof.circleimageview.CircleImageView
-            android:id="@+id/account_head_img"
-            android:layout_width="@dimen/head_profile_small_size"
-            android:layout_height="@dimen/head_profile_small_size"
-            android:layout_gravity="center_vertical"
-            android:src="@drawable/headicon_default"
-            app:civ_border_width="2dp"
-            app:civ_border_color="@color/darkGray"/>
+        <RelativeLayout
+            android:layout_width="@dimen/head_profile_middle_size"
+            android:layout_height="@dimen/head_profile_middle_size">
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/account_head_img"
+                android:layout_width="@dimen/head_profile_small_size"
+                android:layout_height="@dimen/head_profile_small_size"
+                android:layout_centerInParent="true"
+                android:layout_gravity="center_vertical"
+                android:src="@drawable/headicon_default"
+                app:civ_border_width="2dp"
+                app:civ_border_color="@color/darkGray"/>
+            <ImageView
+                android:id="@+id/account_favorite"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentBottom="true"
+                android:src="@drawable/icon_favorite_red"
+                android:visibility="gone"/>
+        </RelativeLayout>
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
+            android:layout_marginLeft="5dp"
+            android:layout_gravity="center_vertical"
             android:orientation="vertical">
             <TextView
                 android:id="@+id/account_name_txt"
@@ -45,7 +59,6 @@
                 android:textSize="@dimen/text_size_small"
                 android:textColor="@color/gray"
                 tools:text="dirty boy, shenzhen, NJU"/>
-
         </LinearLayout>
     </LinearLayout>
 

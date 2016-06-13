@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="10dp"
+    android:orientation="horizontal"
+    android:background="?attr/selectableItemBackground">
+
+    <ImageView
+        android:layout_width="@dimen/head_profile_small_size"
+        android:layout_height="@dimen/head_profile_small_size"
+        android:src="@drawable/icon_add_box_black"/>
+    <TextView
+        android:id="@+id/account_name_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="10dp"
+        android:layout_gravity="center_vertical"
+        android:singleLine="true"
+        android:textSize="@dimen/text_size_middle"
+        android:textColor="@color/gray"
+        android:text="@string/info_post_new_user"/>
+</LinearLayout>

@@ -27,19 +27,18 @@ public class SecretImageUploader {
 
     private static final int MSG_FINISH = 1;
     private static final int MSG_ERROR = 2;
+    private static final int MSG_PROGRESS = 3;
 
     private XHttp mHttpClient;
     private XTaskMgr<XMgrTaskExecutor<SecretUploadBean>, SecretUploadBean> mTaskMgr;
-    private Map<String, Secret> mSecrets;
-    private Map<String, ResultListener<Secret>> mListener;
+    private Map<Secret, ProgressListener<Secret>> mListener;
     private File mUploadDir;// 用于加密解密的临时文件夹
     private UploadManager mQiniuUploadMgr;
 
     public SecretImageUploader(Context context, XHttp httpClient, UploadManager qiniuUploadMgr) {
         mHttpClient = httpClient;
         mQiniuUploadMgr = qiniuUploadMgr;
-        mSecrets = new HashMap<String, Secret>();
-        mListener = new HashMap<String, ResultListener<Secret>>();
+        mListener = new HashMap<Secret, ProgressListener<Secret>>();
         mUploadDir = context.getCacheDir();
         mTaskMgr = new XSerialMgrImpl<SecretUploadBean>();
         mTaskMgr.registerListener(new InnerListener(
@@ -47,20 +46,23 @@ public class SecretImageUploader {
                         new Handler.Callback() {
                             @Override
                             public boolean handleMessage(Message msg) {
-                                String sid = (String) msg.obj;
-                                Secret secret = mSecrets.get(sid);
-                                ResultListener<Secret> listener = mListener.get(sid);
-                                switch (msg.what) {
-                                    case MSG_FINISH:
-                                        mSecrets.remove(sid);
-                                        mListener.remove(sid);
-                                        listener.onResult(true, secret);
-                                        break;
-                                    case MSG_ERROR:
-                                        mSecrets.remove(sid);
-                                        mListener.remove(sid);
-                                        listener.onResult(false, secret);
-                                        break;
+                                Secret secret = (Secret) msg.obj;
+                                ProgressListener<Secret> listener = mListener.get(secret);
+                                if (listener != null) {
+                                    switch (msg.what) {
+                                        case MSG_PROGRESS:
+                                            listener.onProgress(secret,
+                                                    secret.completeSize, secret.size);
+                                            break;
+                                        case MSG_FINISH:
+                                            mListener.remove(secret);
+                                            listener.onResult(true, secret);
+                                            break;
+                                        case MSG_ERROR:
+                                            mListener.remove(secret);
+                                            listener.onResult(false, secret);
+                                            break;
+                                    }
                                 }
                                 return true;
                             }
@@ -73,15 +75,14 @@ public class SecretImageUploader {
     }
 
     @MainThread
-    public void upload(Secret secret, ResultListener<Secret> listener) {
+    public void upload(Secret secret, ProgressListener<Secret> listener) {
         if (!secret.needUpload) {
             return;
         }
 
         SecretUploadBean bean = new SecretUploadBean(secret);
         if (mTaskMgr.addTask(createTask(bean))) {
-            mSecrets.put(secret.sid, secret);
-            mListener.put(secret.sid, listener);
+            mListener.put(secret, listener);
             mTaskMgr.start();
         }
     }
@@ -154,8 +155,11 @@ public class SecretImageUploader {
         public void onFinishAll() {}
 
         @Override
-        public void onDoing(SecretUploadBean bean, long l) {
-
+        public void onDoing(SecretUploadBean bean, long completeSize) {
+            Message msg = handler.obtainMessage(MSG_PROGRESS);
+            msg.obj = bean.secret;
+            bean.secret.completeSize = completeSize;
+            msg.sendToTarget();
         }
 
         @Override

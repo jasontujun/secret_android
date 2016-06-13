@@ -20,6 +20,8 @@ import java.util.List;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
+import me.buryinmind.android.app.uicontrol.XListAdapter;
+import me.buryinmind.android.app.uicontrol.XViewHolder;
 import me.buryinmind.android.app.util.ApiUtil;
 
 /**
@@ -47,7 +49,6 @@ public class ChooseAccountFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         if (getArguments() != null) {
-            mListener = (FragmentInteractListener) getArguments().getSerializable(FragmentInteractListener.KEY);
             type = getArguments().getInt(KEY_TYPE);
             switch (type) {
                 case TYPE_ACTIVE_ACCOUNT_LIST:
@@ -130,136 +131,73 @@ public class ChooseAccountFragment extends Fragment {
         return rootView;
     }
 
+    public void setListener(FragmentInteractListener listener) {
+        mListener = listener;
+    }
 
-    public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
-        private final List<User> mValues;
+    public class UserAdapter extends XListAdapter<User> {
 
         public UserAdapter(List<User> items) {
-            mValues = items;
+            super(R.layout.item_account, items);
         }
 
         @Override
-        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_account, parent, false);
-            return new ViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(final ViewHolder holder, int position) {
-            holder.mItem = mValues.get(position);
-            holder.mHeadView.setImageResource(R.drawable.headicon_active);
-            holder.mNameView.setText(holder.mItem.name);
-            holder.mDescriptionView.setText(XStringUtil.list2String(holder.mItem.descriptions, ", "));
+        public void onBindViewHolder(final XViewHolder holder, int position) {
+            final User item = getData().get(position);
+            holder.getView(R.id.account_name_txt, TextView.class).setText(item.name);
+            holder.getView(R.id.account_des_txt, TextView.class)
+                    .setText(XStringUtil.list2String(item.descriptions, ", "));
             Glide.with(getActivity())
-                    .load(ApiUtil.getIdUrl(holder.mItem.uid))
+                    .load(ApiUtil.getIdUrl(item.uid))
                     .dontAnimate()
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.headicon_default)
                     .error(R.drawable.headicon_default)
-                    .into(holder.mHeadView);
+                    .into(holder.getView(R.id.account_head_img, ImageView.class));
 
-            holder.mView.setOnClickListener(new View.OnClickListener() {
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mListener != null) {
-                        mListener.onFinish(true, holder.mItem);
+                        mListener.onFinish(true, item);
                     }
                 }
             });
-        }
-
-        @Override
-        public int getItemCount() {
-            return mValues.size();
-        }
-
-        public class ViewHolder extends RecyclerView.ViewHolder {
-            public final View mView;
-            public final ImageView mHeadView;
-            public final TextView mNameView;
-            public final TextView mDescriptionView;
-            public User mItem;
-
-            public ViewHolder(View view) {
-                super(view);
-                mView = view;
-                mHeadView = (ImageView) view.findViewById(R.id.account_head_img);
-                mNameView = (TextView) view.findViewById(R.id.account_name_txt);
-                mDescriptionView = (TextView) view.findViewById(R.id.account_des_txt);
-            }
         }
     }
 
 
-    public class GiftAdapter extends RecyclerView.Adapter<GiftAdapter.ViewHolder> {
-        private final List<MemoryGift> mValues;
+    public class GiftAdapter extends XListAdapter<MemoryGift> {
 
         public GiftAdapter(List<MemoryGift> items) {
-            mValues = items;
+            super(R.layout.item_account, items);
         }
 
         @Override
-        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_account, parent, false);
-            return new ViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(final ViewHolder holder, int position) {
-            holder.mItem = mValues.get(position);
-            holder.mNameView.setText(holder.mItem.senderName);
-            holder.mDescriptionView.setVisibility(View.GONE);
-            holder.mAboutLayout.setVisibility(View.VISIBLE);
-            holder.mAboutView.setText(XStringUtil.list2String(holder.mItem.receiverDescription, ", "));
-            holder.mQuestionLayout.setVisibility(View.VISIBLE);
-            holder.mQuestionView.setText(holder.mItem.question);
+        public void onBindViewHolder(final XViewHolder holder, int position) {
+            final MemoryGift item = getData().get(position);
+            holder.getView(R.id.account_name_txt, TextView.class).setText(item.senderName);
+            holder.getView(R.id.account_des_txt, TextView.class).setVisibility(View.GONE);
+            holder.getView(R.id.account_about_layout).setVisibility(View.VISIBLE);
+            holder.getView(R.id.account_about_txt, TextView.class).setText(XStringUtil.list2String(item.receiverDescription, ", "));
+            holder.getView(R.id.account_question_layout).setVisibility(View.VISIBLE);
+            holder.getView(R.id.account_question_txt, TextView.class).setText(item.question);
 
             Glide.with(getActivity())
-                    .load(ApiUtil.getIdUrl(holder.mItem.receiverId))
+                    .load(ApiUtil.getIdUrl(item.receiverId))
                     .dontAnimate()
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.headicon_default)
                     .error(R.drawable.headicon_default)
-                    .into(holder.mHeadView);
-            holder.mView.setOnClickListener(new View.OnClickListener() {
+                    .into(holder.getView(R.id.account_head_img, ImageView.class));
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mListener != null) {
-                        mListener.onFinish(true, holder.mItem);
+                        mListener.onFinish(true, item);
                     }
                 }
             });
-        }
-
-        @Override
-        public int getItemCount() {
-            return mValues.size();
-        }
-
-        public class ViewHolder extends RecyclerView.ViewHolder {
-            public final View mView;
-            public final ImageView mHeadView;
-            public final TextView mNameView;
-            public final TextView mDescriptionView;
-            public final View mAboutLayout;
-            public final TextView mAboutView;
-            public final View mQuestionLayout;
-            public final TextView mQuestionView;
-            public MemoryGift mItem;
-
-            public ViewHolder(View view) {
-                super(view);
-                mView = view;
-                mHeadView = (ImageView) view.findViewById(R.id.account_head_img);
-                mNameView = (TextView) view.findViewById(R.id.account_name_txt);
-                mDescriptionView = (TextView) view.findViewById(R.id.account_des_txt);
-                mAboutLayout = view.findViewById(R.id.account_about_layout);
-                mAboutView = (TextView) view.findViewById(R.id.account_about_txt);
-                mQuestionLayout = view.findViewById(R.id.account_question_layout);
-                mQuestionView = (TextView) view.findViewById(R.id.account_question_txt);
-            }
         }
     }
 }

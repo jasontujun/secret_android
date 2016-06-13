@@ -50,7 +50,6 @@
                         android:layout_marginBottom="40dp"
                         android:layout_marginLeft="20dp"
                         android:padding="10dp"
-                        android:orientation="vertical"
                         android:singleLine="true"
                         android:textColor="@color/white"
                         android:textSize="@dimen/text_size_small"
@@ -68,13 +67,12 @@
             </android.support.design.widget.CollapsingToolbarLayout>
         </android.support.design.widget.AppBarLayout>
 
-        <!-- RecyclerView -->
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/secret_edit_list"
+        <!-- Content Layout -->
+        <FrameLayout
+            android:id="@+id/content_layout"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior"
-            tools:listitem="@layout/item_edit_secret"/>
+            app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
         <!--author info-->
         <LinearLayout

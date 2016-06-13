@@ -57,7 +57,6 @@ public class LoginAccountFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         if (getArguments() != null) {
-            mListener = (FragmentInteractListener) getArguments().getSerializable(FragmentInteractListener.KEY);
             userId = getArguments().getString(KEY_USER_ID);
             userName = getArguments().getString(KEY_USER_NAME);
             userDescription = (List<String>) getArguments().getSerializable(KEY_USER_DESCRIPTION);
@@ -106,6 +105,10 @@ public class LoginAccountFragment extends Fragment {
             }
         });
         return rootView;
+    }
+
+    public void setListener(FragmentInteractListener listener) {
+        mListener = listener;
     }
 
     private void tryLogin() {

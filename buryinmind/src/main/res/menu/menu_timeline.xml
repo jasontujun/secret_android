@@ -2,9 +2,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".activity.TimelineActivity">
+    <!--<item-->
+        <!--android:id="@+id/action_settings"-->
+        <!--android:orderInCategory="100"-->
+        <!--android:title="@string/button_settings"-->
+        <!--app:showAsAction="never" />-->
     <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/button_settings"
-        app:showAsAction="never" />
+        android:id="@+id/action_logout"
+        android:icon="@drawable/icon_logout_white"
+        android:title="@string/button_logout"
+        app:showAsAction="ifRoom" />
 </menu>

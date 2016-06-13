@@ -53,7 +53,6 @@ public class ActivateAccountFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         if (getArguments() != null) {
-            mListener = (FragmentInteractListener) getArguments().getSerializable(FragmentInteractListener.KEY);
             mGift = (MemoryGift) getArguments().getSerializable(KEY_GIFT);
             mAnswer = getArguments().getString(KEY_ANSWER);
         }
@@ -94,6 +93,10 @@ public class ActivateAccountFragment extends Fragment {
             }
         });
         return rootView;
+    }
+
+    public void setListener(FragmentInteractListener listener) {
+        mListener = listener;
     }
 
     private void tryActivateAccount() {
@@ -159,7 +162,7 @@ public class ActivateAccountFragment extends Fragment {
             mListener.onLoading();
         }
         MyApplication.getAsyncHttp().execute(
-                ApiUtil.activateUser(mGift.receiverId, mGift.bid, password2, email, mAnswer),
+                ApiUtil.activateUser(mGift.receiverId, mGift.gid, password2, email, mAnswer),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
                     @Override

@@ -5,4 +5,9 @@
         android:icon="@drawable/icon_add_white"
         android:title="@string/button_add_secret"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_post"
+        android:icon="@drawable/icon_send_white"
+        android:title="@string/button_post"
+        app:showAsAction="ifRoom" />
 </menu>

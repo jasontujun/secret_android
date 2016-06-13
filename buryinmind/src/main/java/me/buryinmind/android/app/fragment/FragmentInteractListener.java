@@ -5,9 +5,7 @@ import java.io.Serializable;
 /**
  * Created by jasontujun on 2016/4/20.
  */
-public interface FragmentInteractListener extends Serializable {
-
-    public static final String KEY = "listener";
+public interface FragmentInteractListener {
 
     void onLoading();
 

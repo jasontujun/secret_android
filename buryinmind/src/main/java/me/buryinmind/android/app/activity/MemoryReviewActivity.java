@@ -28,6 +28,7 @@ import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.Secret;
+import me.buryinmind.android.app.uicontrol.XListAdapter;
 import me.buryinmind.android.app.uicontrol.XViewHolder;
 
 /**
@@ -151,55 +152,19 @@ public class MemoryReviewActivity extends AppCompatActivity {
 
 
 
-    private class ViewAdapter extends RecyclerView.Adapter<XViewHolder> {
-
-        private final List<Secret> mItems;
+    private class ViewAdapter extends XListAdapter<Secret> {
 
         public ViewAdapter(List<Secret> items) {
-            mItems = new ArrayList<Secret>();
-            if (items != null)
-                mItems.addAll(items);
-        }
-
-        public void addData(Secret data) {
-            int position = mItems.size();
-            mItems.add(data);
-            notifyItemInserted(position);
-        }
-
-        public void addData(List<Secret> data) {
-            int position = mItems.size();
-            mItems.addAll(data);
-            notifyItemRangeInserted(position, data.size());
-        }
-
-        public void deleteData(Secret data) {
-            int pos = mItems.indexOf(data);
-            if (pos == -1) {
-                return;
-            }
-            mItems.remove(data);
-            notifyItemRemoved(pos + 1);
-        }
-
-        @Override
-        public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            return new XViewHolder(LayoutInflater.from(MemoryReviewActivity.this)
-                    .inflate(R.layout.item_view_secret, parent, false));
+            super(R.layout.item_view_secret, items);
         }
 
         @Override
         public void onBindViewHolder(final XViewHolder holder, final int position) {
-            final Secret item = mItems.get(position);
+            final Secret item = getData().get(position);
             Glide.with(MemoryReviewActivity.this)
                     .load(item.localPath)
                     .error(R.drawable.profile_default)
                     .into(holder.getView(R.id.secret_item_img, ImageView.class));
-        }
-
-        @Override
-        public int getItemCount() {
-            return mItems.size();
         }
     }
 }

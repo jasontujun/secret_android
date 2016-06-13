@@ -9,7 +9,6 @@ import com.qiniu.android.storage.UploadOptions;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.android.utils.XStorageUtil;
-import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttp;
 import com.tj.xengine.core.network.http.XHttpRequest;
@@ -25,9 +24,7 @@ import java.io.File;
 import java.util.concurrent.Future;
 
 import me.buryinmind.android.app.MyApplication;
-import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.model.Secret;
-import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.CryptoUtil;
 
@@ -156,7 +153,7 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
         String keyStr = CryptoUtil.toMd5(secret.sid, 16);
         String ivStr = CryptoUtil.toMd5(String.valueOf(secret.createTime), 16);
         encryptFile = CryptoUtil.aesEncryptFile(secret.localPath,
-                keyStr.getBytes(), ivStr.getBytes(), encryptFileName);
+                keyStr.getBytes(), ivStr.getBytes(), encryptFile.getAbsolutePath());
         return encryptFile;
     }
 
@@ -165,7 +162,6 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
         private Future mFuture;// 在暂停线程时用于中断阻塞的Future对象
         private String errorCode;// 错误码
         private boolean success;
-        private String uid;
         private String token;
         private String key;
         private long completeSize;
@@ -204,16 +200,6 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
                 errorCode = ERROR_NO_SPACE;
                 return false;
             }
-            // 获取当前用户uid
-            GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance()
-                    .getSource(MyApplication.SOURCE_GLOBAL);
-            User user = source.getUser();
-            if (user != null) {
-                uid = user.uid;
-            }
-            if (XStringUtil.isEmpty(uid)) {
-                return false;
-            }
             return true;
         }
 
@@ -224,14 +210,16 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
 
         @Override
         public boolean onRepeatExecute(SecretUploadBean bean) {
+            completeSize = 0;
+            SecretImageUploadTask.this.notifyDoing(completeSize);
             // 如果secret还未添加到服务器端，则调用AddSecret接口，返回sid和上传凭证;
             // 如果secret已经添加到服务器，则直接调用获取上传凭证接口，返回上传凭证。
             XHttpRequest request = XStringUtil.isEmpty(bean.secret.sid) ?
-                    ApiUtil.addSecret(uid, bean.secret.mid, bean.secret) :
-                    ApiUtil.getSecretUploadToken(uid, bean.secret.mid, bean.secret.sid);
+                    ApiUtil.addSecret(bean.secret.mid, bean.secret) :
+                    ApiUtil.getSecretUploadToken(bean.secret.mid, bean.secret.sid);
             XHttpResponse response = mHttpClient.execute(request);
             if (response == null) {
-                XLog.d(TAG, "获取secret下载地址返回的response为空");
+                XLog.d(TAG, "获取secret上传凭证返回的response为空");
                 errorCode = ERROR_NO_RESPONSE;
                 return false;
             }
@@ -241,13 +229,13 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
                 return false;
             }
             if (response.getStatusCode() < 200 && response.getStatusCode() >= 300) {
-                XLog.d(TAG, "获取secret下载地址错误，返回码：" + response.getStatusCode());
+                XLog.d(TAG, "获取secret上传凭证错误，返回码：" + response.getStatusCode());
                 errorCode = ERROR_STATUS_CODE;
                 return false;
             }
             JSONObject jo = mHttpHandler.handleResponse(response);
             if (jo == null) {
-                XLog.d(TAG, "获取secret下载地址返回的response的内容为空");
+                XLog.d(TAG, "获取secret上传凭证返回的response的内容为空");
                 errorCode = ERROR_JSON_EXCEPTION;
                 return false;
             }
@@ -259,10 +247,11 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
                     return false;
                 }
                 XLog.d(TAG, "secret上传凭证，token=" + token + ",key=" + key);
-                bean.secret.key = key;
                 if (XStringUtil.isEmpty(bean.secret.sid)) {
                     bean.secret.sid = jo.getString("sid");
                     bean.secret.dfs = jo.getInt("dfs");
+                    bean.secret.createTime = jo.getLong("ctime");
+                    bean.secret.setId(bean.secret.mid, bean.secret.sid);
                 }
                 success = true;
                 return true;
@@ -282,6 +271,7 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
                     SecretImageUploadTask.this.endError(ERROR_IO_ERROR, false);
                     return;
                 }
+                XLog.d(TAG, "加密本地文件成功!开始上传文件");
                 mQiniuUploadMgr.put(encryptFile, key, token,
                         new UpCompletionHandler() {
                             @Override
@@ -290,23 +280,26 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
                                     XLog.d(TAG, "上传成功! " + info.toString());
                                     // 本地回调服务器，文件上传成功
                                     MyApplication.getAsyncHttp().execute(
-                                            ApiUtil.callbackSecretUpload(uid, bean.secret.mid,
+                                            ApiUtil.callbackSecretUpload(bean.secret.mid,
                                                     bean.secret.sid, key, bean.secret.dfs),
                                             new XAsyncHttp.Listener() {
                                                 @Override
                                                 public void onNetworkError() {
+                                                    XLog.d(TAG, "上传回调失败1!");
                                                     errorCode = ERROR_NO_RESPONSE;
                                                     SecretImageUploadTask.this.endError(errorCode, false);
                                                 }
 
                                                 @Override
                                                 public void onFinishError(XHttpResponse xHttpResponse) {
+                                                    XLog.d(TAG, "上传回调失败2!");
                                                     errorCode = ERROR_STATUS_CODE;
                                                     SecretImageUploadTask.this.endError(errorCode, false);
                                                 }
 
                                                 @Override
                                                 public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                                                    XLog.d(TAG, "上传回调成功!");
                                                     bean.secret.needUpload = false;
                                                     SecretImageUploadTask.this.endSuccess();
                                                 }
