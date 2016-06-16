@@ -122,7 +122,7 @@ public class AnswerAccountFragment extends Fragment {
             return;
         }
         if (mListener != null) {
-            mListener.onLoading();
+            mListener.onLoading(true);
         }
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.answerActivateQuestion(mGift.receiverId, mGift.gid, answer),

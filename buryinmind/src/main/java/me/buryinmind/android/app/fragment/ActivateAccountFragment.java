@@ -159,7 +159,7 @@ public class ActivateAccountFragment extends Fragment {
             return;
         }
         if (mListener != null) {
-            mListener.onLoading();
+            mListener.onLoading(true);
         }
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.activateUser(mGift.receiverId, mGift.gid, password2, email, mAnswer),

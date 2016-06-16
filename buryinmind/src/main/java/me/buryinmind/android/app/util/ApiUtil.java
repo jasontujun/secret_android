@@ -21,7 +21,7 @@ import me.buryinmind.android.app.model.User;
  * Created by jason on 2016/4/20.
  */
 public abstract class ApiUtil {
-    private static final String DOMAIN = "http://192.168.1.102:3000";
+    private static final String DOMAIN = "http://192.168.1.103:3000";
     private static final String PUBLIC_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
 
 
@@ -175,7 +175,7 @@ public abstract class ApiUtil {
         for (String des : receiverDes) {
             ja.put(des);
         }
-        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/post")
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/memory/post")
                 .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
                 .addStringParam("uid", getLocalUserId())
@@ -184,20 +184,34 @@ public abstract class ApiUtil {
                 .addStringParam("rid", receiverId)
                 .addStringParam("rname", receiverName)
                 .addStringParam("rdes", ja.toString())
-                .addStringParam("question", question)
-                .addStringParam("answer", CryptoUtil.toMd5(answer))
                 .addStringParam("future", String.valueOf(receiveTime));
+        if (!XStringUtil.isEmpty(question) && !XStringUtil.isEmpty(answer)) {
+            request.addStringParam("question", question)
+                    .addStringParam("answer", CryptoUtil.toMd5(answer));
+        }
+        return request;
     }
 
     public static XHttpRequest receiveMemory(String giftId, String answer) {
-        String salt = "" + System.currentTimeMillis();
-        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/receive")
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/memory/receive")
                 .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", getLocalUserId())
                 .addStringParam("token", getLocalToken())
-                .addStringParam("gid", giftId)
-                .addStringParam("answer", CryptoUtil.toMd5(CryptoUtil.toMd5(answer), salt))
-                .addStringParam("sa", salt);
+                .addStringParam("gid", giftId);
+        if (!XStringUtil.isEmpty(answer)) {
+            String salt = "" + System.currentTimeMillis();
+            request.addStringParam("answer", CryptoUtil.toMd5(CryptoUtil.toMd5(answer), salt))
+                    .addStringParam("sa", salt);
+        }
+        return request;
+    }
+
+    public static XHttpRequest rejectMemory(String giftId) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/reject")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("gid", giftId);
     }
 
     public static XHttpRequest getMemoryDetail(String mid) {

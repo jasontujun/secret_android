@@ -26,7 +26,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.tj.xengine.android.utils.XLog;
 
 import java.io.File;
@@ -41,7 +40,7 @@ import me.buryinmind.android.app.dialog.DirPopupWindow;
 import me.buryinmind.android.app.model.ImageFolder;
 import me.buryinmind.android.app.model.Secret;
 import me.buryinmind.android.app.uicontrol.DividerGridItemDecoration;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.adapter.XViewHolder;
 
 /**
  * Created by jasontujun on 2016/5/19.

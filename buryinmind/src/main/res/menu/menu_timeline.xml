@@ -12,4 +12,14 @@
         android:icon="@drawable/icon_logout_white"
         android:title="@string/button_logout"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_next"
+        android:icon="@drawable/icon_navigate_next_white"
+        android:title="@string/button_next"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_done"
+        android:icon="@drawable/icon_done_white"
+        android:title="@string/button_done"
+        app:showAsAction="ifRoom" />
 </menu>

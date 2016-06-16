@@ -8,6 +8,7 @@ import android.content.Context;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.view.animation.ScaleAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
@@ -20,7 +21,7 @@ import me.buryinmind.android.app.R;
  */
 public abstract class ViewUtil {
 
-    public static void hidInputMethod(Activity activity) {
+    public static void hideInputMethod(Activity activity) {
         if (activity == null)
             return;
         View view = activity.getCurrentFocus();
@@ -31,12 +32,58 @@ public abstract class ViewUtil {
         }
     }
 
-    public static void animateFadeInOut(final View view, final boolean fadeout) {
+    public static void animateFadeInOut(View view, boolean fadeout) {
         if (view == null)
             return;
         view.animate()
                 .alpha(fadeout ? 0f : 1f)
                 .setDuration(300);
+    }
+
+    public static void animateFade(final View view, final boolean fadeout) {
+        if (view == null)
+            return;
+        view.animate()
+                .alpha(fadeout ? 0f : 1f)
+                .setDuration(300)
+                .setListener(new Animator.AnimatorListener() {
+                    @Override
+                    public void onAnimationStart(Animator animation) {
+                        if (!fadeout)
+                            view.setVisibility(View.VISIBLE);
+                    }
+
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        if (fadeout)
+                            view.setVisibility(View.GONE);
+                    }
+
+                    @Override
+                    public void onAnimationCancel(Animator animation) {
+                        if (fadeout)
+                            view.setVisibility(View.GONE);
+                        else
+                            view.setVisibility(View.VISIBLE);
+                    }
+
+                    @Override
+                    public void onAnimationRepeat(Animator animation) {
+
+                    }
+                });
+    }
+
+    public static Animator animateShine(final View view) {
+        if (view == null)
+            return null;
+        ObjectAnimator anim = ObjectAnimator
+                .ofFloat(view, "alpha", 1.0F, 0.1F)
+                .setDuration(2000);
+        anim.setRepeatCount(ValueAnimator.INFINITE);
+        anim.setRepeatMode(ValueAnimator.REVERSE);
+        anim.start();
+        return anim;
     }
 
     public static Animator animateScale(final View view) {
@@ -59,16 +106,35 @@ public abstract class ViewUtil {
         return anim;
     }
 
-    public static Animator animateShine(final View view) {
+    public static void animateExpand(final View view, final boolean expand) {
         if (view == null)
-            return null;
-        ObjectAnimator anim = ObjectAnimator
-                .ofFloat(view, "alpha", 1.0F, 0.1F)
-                .setDuration(2000);
-        anim.setRepeatCount(ValueAnimator.INFINITE);
-        anim.setRepeatMode(ValueAnimator.REVERSE);
-        anim.start();
-        return anim;
+            return;
+        if (expand) {
+            view.setVisibility(View.VISIBLE);
+        }
+        Animation scaleAnimation = expand ? new ScaleAnimation(1.0f, 1.0f, 0f, 1.0f) :
+                new ScaleAnimation(1.0f, 1.0f, 1.0f, 0f);
+        scaleAnimation.setDuration(200);
+        scaleAnimation.setFillAfter(true);
+        scaleAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                if (!expand) {
+                    view.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        view.startAnimation(scaleAnimation);
     }
 
     public static void showNetworkError(Context context) {

@@ -7,9 +7,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,15 +19,14 @@ import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.utils.XStringUtil;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.Secret;
-import me.buryinmind.android.app.uicontrol.XListAdapter;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.adapter.XListAdapter;
+import me.buryinmind.android.app.adapter.XViewHolder;
 
 /**
  * Created by jasontujun on 2016/5/22.

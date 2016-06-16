@@ -35,6 +35,7 @@ import me.buryinmind.android.app.util.TimeUtil;
 public class AddMemoryDialog extends DialogFragment {
 
     public static final String TAG = "AddMemoryDialog";
+    public static final String TAG_DATE_PICKER = "datepicker";
     public static final String KEY_HAPPEN = "happen";
     public static final String KEY_NAME = "name";
 
@@ -139,7 +140,7 @@ public class AddMemoryDialog extends DialogFragment {
                     mDateDialog.initialize(mDateDialogListener,
                             mHappenDate.get(Calendar.YEAR), mHappenDate.get(Calendar.MONTH),
                             mHappenDate.get(Calendar.DAY_OF_MONTH), false);
-                    mDateDialog.show(getFragmentManager(), TimelineActivity.TAG_DATE_PICKER);
+                    mDateDialog.show(getFragmentManager(), TAG_DATE_PICKER);
                     dismiss();
                 }
             });
@@ -179,7 +180,7 @@ public class AddMemoryDialog extends DialogFragment {
             }
         } else {
             showDateDialog = true;
-            mDateDialog.show(getFragmentManager(), TimelineActivity.TAG_DATE_PICKER);
+            mDateDialog.show(getFragmentManager(), TAG_DATE_PICKER);
         }
         dismiss();
     }

@@ -20,8 +20,8 @@ import java.util.List;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
-import me.buryinmind.android.app.uicontrol.XListAdapter;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.adapter.XListAdapter;
+import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.util.ApiUtil;
 
 /**

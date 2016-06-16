@@ -39,7 +39,6 @@
                     android:id="@+id/toolbar"
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
-                    android:onClick="clickToolBar"
                     app:logo="@drawable/logo_buryinmind_white_small"
                     app:titleTextColor="@color/white"
                     app:layout_collapseMode="pin"
@@ -48,63 +47,13 @@
             </android.support.design.widget.CollapsingToolbarLayout>
         </android.support.design.widget.AppBarLayout>
 
-        <!-- Account list -->
-        <!--<android.support.v4.widget.SwipeRefreshLayout-->
-            <!--android:id="@+id/timeline_refresh_layout"-->
-            <!--android:layout_width="match_parent"-->
-            <!--android:layout_height="wrap_content"-->
-            <!--app:layout_behavior="@string/appbar_scrolling_view_behavior">-->
-        <RelativeLayout
+        <FrameLayout
             android:id="@+id/content_layout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
-            <android.support.v7.widget.RecyclerView
-                android:id="@+id/timeline_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:layoutManager="LinearLayoutManager"
-                tools:listitem="@layout/item_timeline_node"/>
-            <LinearLayout
-                android:id="@+id/timeline_birthday_layout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_centerHorizontal="true"
-                android:layout_marginTop="60dp"
-                android:padding="10dp"
-                android:orientation="vertical"
-                android:visibility="gone">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:padding="6dp"
-                    android:textSize="@dimen/text_size_small"
-                    android:textColor="@color/gray"
-                    android:text="@string/info_set_birthday"/>
-                <Button
-                    android:id="@+id/timeline_birthday_btn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:padding="20dp"
-                    android:textSize="@dimen/text_size_small"
-                    android:textColor="@color/gray"
-                    android:text="@string/info_set_birthday_btn"
-                    android:onClick="clickBirthBtn"/>
-            </LinearLayout>
-        </RelativeLayout>
-        <!--</android.support.v4.widget.SwipeRefreshLayout>-->
+            android:layout_height="match_parent"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
     </android.support.design.widget.CoordinatorLayout>
-
-    <android.support.v7.widget.AppCompatImageView
-        android:id="@+id/timeline_add_btn"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_margin="20dp"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        app:srcCompat="@drawable/btn_add_black"/>
 
     <!-- Loading progress -->
     <ProgressBar

@@ -125,7 +125,7 @@ public class LoginActivity extends AppCompatActivity {
     public boolean onTouchEvent(MotionEvent event) {
         if (this.getCurrentFocus() != null){
             // 点击空白位置 隐藏软键盘
-            ViewUtil.hidInputMethod(this);
+            ViewUtil.hideInputMethod(this);
         }
         return super .onTouchEvent(event);
     }
@@ -143,7 +143,6 @@ public class LoginActivity extends AppCompatActivity {
                     GlobalSource source = (GlobalSource) XDefaultDataRepo
                             .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
                     if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
-//                        SystemMgr.getInstance().clearSystem();
                         finish();
                     } else {
                         source.setLastBackTime(currentTime);
@@ -166,8 +165,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((SearchAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override
@@ -205,8 +204,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((ChooseAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override
@@ -240,8 +239,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((LoginAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override
@@ -278,8 +277,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((ChooseAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override
@@ -327,8 +326,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((ChooseAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override
@@ -364,8 +363,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((AnswerAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override
@@ -396,8 +395,8 @@ public class LoginActivity extends AppCompatActivity {
                 ((ActivateAccountFragment) fragment).setListener(
                         new FragmentInteractListener() {
                             @Override
-                            public void onLoading() {
-                                showProgress(true);
+                            public void onLoading(boolean show) {
+                                showProgress(show);
                             }
 
                             @Override

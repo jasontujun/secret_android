@@ -7,7 +7,7 @@ import java.io.Serializable;
  */
 public interface FragmentInteractListener {
 
-    void onLoading();
+    void onLoading(boolean show);
 
     void onBack();
 

@@ -1,4 +1,4 @@
-package me.buryinmind.android.app.uicontrol;
+package me.buryinmind.android.app.adapter;
 
 import android.support.v7.widget.RecyclerView;
 import android.util.SparseArray;

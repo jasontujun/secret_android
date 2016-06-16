@@ -139,7 +139,7 @@ public class LoginAccountFragment extends Fragment {
             return;
         }
         if (mListener != null) {
-            mListener.onLoading();
+            mListener.onLoading(true);
         }
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.loginUser(userId, password),

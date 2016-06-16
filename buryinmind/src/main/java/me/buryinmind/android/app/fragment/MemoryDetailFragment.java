@@ -47,8 +47,8 @@ import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.Secret;
 import me.buryinmind.android.app.uicontrol.XLinearLayoutManager;
-import me.buryinmind.android.app.uicontrol.XListAdapter;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.adapter.XListAdapter;
+import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.ViewUtil;
 

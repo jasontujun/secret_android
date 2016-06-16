@@ -1,4 +1,4 @@
-package me.buryinmind.android.app.uicontrol;
+package me.buryinmind.android.app.adapter;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -7,8 +7,6 @@ import android.view.ViewGroup;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import me.buryinmind.android.app.R;
 
 /**
  * Created by jasontujun on 2016/6/6.

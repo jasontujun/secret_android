@@ -24,6 +24,7 @@
     <string name="button_no">否</string>
     <string name="button_settings">设置</string>
     <string name="button_logout">登出</string>
+    <string name="button_next">下一步</string>
     <string name="button_add_secret">添加</string>
     <string name="button_post">寄出</string>
     <string name="button_unlock">解锁</string>
@@ -43,6 +44,7 @@
     <string name="error_upload_picture">抱歉，图片上传失败!</string>
     <string name="error_duplicate_des">描述已存在!</string>
     <string name="error_insufficient_des">抱歉，描述不得少于三个!</string>
+    <string name="error_excessive_des">抱歉，描述不得多于七个!</string>
 
     <string name="info_press_back_again">再按一次退出程序</string>
     <string name="info_question">对你的问题:</string>

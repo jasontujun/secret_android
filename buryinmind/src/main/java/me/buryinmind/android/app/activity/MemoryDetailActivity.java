@@ -3,58 +3,33 @@ package me.buryinmind.android.app.activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
-import android.graphics.Canvas;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
-import android.support.v4.view.MotionEventCompat;
-import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.support.v7.widget.helper.ItemTouchHelper;
-import android.util.DisplayMetrics;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.tj.xengine.android.data.XListIdDBDataSourceImpl;
-import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
-import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
-import me.buryinmind.android.app.controller.ProgressListener;
-import me.buryinmind.android.app.data.SecretSource;
-import me.buryinmind.android.app.dialog.ConfirmDialog;
-import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.fragment.FragmentInteractListener;
 import me.buryinmind.android.app.fragment.MemoryDetailFragment;
 import me.buryinmind.android.app.fragment.PostMemoryFragment;
@@ -62,10 +37,8 @@ import me.buryinmind.android.app.fragment.SearchFriendsFragment;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.Secret;
 import me.buryinmind.android.app.model.User;
-import me.buryinmind.android.app.uicontrol.XListAdapter;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.TimeUtil;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
 import me.buryinmind.android.app.util.ViewUtil;
 
 /**
@@ -155,7 +128,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
         });
         mMemoryTime.setText(String.format(getResources().getString(R.string.info_memory_time),
                 XStringUtil.calendar2str(TimeUtil.getCalendar(mMemory.happenTime), ".")));
-        if (!mMemory.ownerId.equals(mMemory.authorId)) {
+        if (!mMemory.authorId.equals(mMemory.ownerId)) {
             mAuthorLayout.setVisibility(View.VISIBLE);
             Glide.with(MemoryDetailActivity.this)
                     .load(ApiUtil.getIdUrl(mMemory.authorId))
@@ -233,7 +206,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
     public boolean onTouchEvent(MotionEvent event) {
         if (this.getCurrentFocus() != null){
             // 点击空白位置 隐藏软键盘
-            ViewUtil.hidInputMethod(this);
+            ViewUtil.hideInputMethod(this);
         }
         return super .onTouchEvent(event);
     }
@@ -311,11 +284,10 @@ public class MemoryDetailActivity extends AppCompatActivity {
 
     private Fragment createFriendsFragment() {
         SearchFriendsFragment fragment = new SearchFriendsFragment();
-        Bundle arguments = new Bundle();
         fragment.setListener(
                 new FragmentInteractListener() {
                     @Override
-                    public void onLoading() {
+                    public void onLoading(boolean show) {
                     }
 
                     @Override
@@ -329,33 +301,31 @@ public class MemoryDetailActivity extends AppCompatActivity {
                         }
                     }
                 });
-        fragment.setArguments(arguments);
         return fragment;
     }
 
     private Fragment createPostFragment(User user) {
         PostMemoryFragment fragment = new PostMemoryFragment();
-        fragment.setListener(
-                new FragmentInteractListener() {
-                    @Override
-                    public void onLoading() {
-                    }
+        fragment.setListener(new FragmentInteractListener() {
+            @Override
+            public void onLoading(boolean show) {
+            }
 
-                    @Override
-                    public void onBack() {
-                    }
+            @Override
+            public void onBack() {
+            }
 
-                    @Override
-                    public void onFinish(boolean result, Object data) {
-                        if (result) {
-                            // TODO 发送成功,重新进入Memory详情界面
-                            Intent intent = new Intent(MemoryDetailActivity.this, MemoryDetailActivity.class);
-                            intent.putExtra("mid", mMemory.mid);
-                            startActivity(intent);
-                            finish();
-                        }
-                    }
-                });
+            @Override
+            public void onFinish(boolean result, Object data) {
+                if (result) {
+                    // TODO 发送成功,重新进入Memory详情界面
+                    Intent intent = new Intent(MemoryDetailActivity.this, MemoryDetailActivity.class);
+                    intent.putExtra("mid", mMemory.mid);
+                    startActivity(intent);
+                    finish();
+                }
+            }
+        });
         Bundle arguments = new Bundle();
         arguments.putString(PostMemoryFragment.KEY_MID, mMemory.mid);
         arguments.putSerializable(PostMemoryFragment.KEY_RECEIVER, user);

@@ -101,7 +101,7 @@ public class SearchAccountFragment extends Fragment {
                 .hideSoftInputFromWindow(mAccountInputView.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         mAccountInputView.clearFocus();
         if (mListener != null) {
-            mListener.onLoading();
+            mListener.onLoading(true);
         }
         MyApplication.getAsyncHttp().execute(
                 isRegister ? ApiUtil.searchSeedUser(name, null)

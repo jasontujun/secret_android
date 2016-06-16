@@ -1,9 +1,7 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -12,9 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -37,9 +33,10 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.adapter.DescriptionAdapter;
 import me.buryinmind.android.app.model.User;
-import me.buryinmind.android.app.uicontrol.XListAdapter;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.adapter.XViewHolder;
+import me.buryinmind.android.app.uicontrol.XAutoGridLayoutManager;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.ViewUtil;
 
@@ -56,7 +53,7 @@ public class SearchFriendsFragment extends Fragment {
     private RecyclerView mDescriptionList;
     private RecyclerView mFriendList;
 
-    private XListAdapter<String> mDescriptionAdapter;
+    private DescriptionAdapter mDescriptionAdapter;
     private UserAdapter mFriendAdapter;
     private XListFilteredIdSourceImpl<User> mFriendSource;
     private XFilter<User> mFriendFilter;
@@ -98,7 +95,21 @@ public class SearchFriendsFragment extends Fragment {
         };
         mFriendSource.setFilter(mFriendFilter);
         mFriendAdapter = new UserAdapter(mFriendSource);
-        mDescriptionAdapter = new DesAdapter();
+        mDescriptionAdapter = new DescriptionAdapter(getActivity(),
+                new DescriptionAdapter.Listener() {
+                    @Override
+                    public void onAdd(String des) {
+                        refreshFriendsList();
+                    }
+
+                    @Override
+                    public void onDelete(String des) {
+                        refreshFriendsList();
+                    }
+
+                    @Override
+                    public void onSelect(int pos, String des) {}
+                });
         // 请求最新的好友列表
         // 在onCreate时请求数据，可以避免fragment切换时过于频繁请求
         requestFriends();
@@ -116,8 +127,7 @@ public class SearchFriendsFragment extends Fragment {
         // 初始化朋友列表
         mFriendList.setAdapter(mFriendAdapter);
         // 初始化描述列表
-        mDescriptionList.setLayoutManager(new LinearLayoutManager
-                (getActivity(), LinearLayoutManager.HORIZONTAL, false));
+        mDescriptionList.setLayoutManager(new XAutoGridLayoutManager(getActivity(), 2000));
         mDescriptionList.setAdapter(mDescriptionAdapter);
         // 初始化名字输入框
         mNameInputView.addTextChangedListener(new TextWatcher() {
@@ -152,7 +162,7 @@ public class SearchFriendsFragment extends Fragment {
             public boolean onEditorAction(TextView v, int id, KeyEvent event) {
                 if (id == EditorInfo.IME_ACTION_SEARCH) {
                     XLog.d(TAG, "mNameInputView键入enter键");
-                    ViewUtil.hidInputMethod(getActivity());
+                    ViewUtil.hideInputMethod(getActivity());
                     // TODO 联网搜索相关名字的用户
                     return true;
                 }
@@ -222,128 +232,6 @@ public class SearchFriendsFragment extends Fragment {
         mFriendAdapter.notifyDataSetChanged();
     }
 
-    private class DesAdapter extends XListAdapter<String> {
-
-        private static final int TYPE_INPUT = 1;
-        private static final int TYPE_DES = 2;
-        private int selectedIndex;
-
-        private XListFilteredIdSourceImpl<User> mSource;
-
-        public DesAdapter() {
-            super(R.layout.item_description);
-            selectedIndex = -1;
-        }
-
-        @Override
-        public int getItemViewType(int position) {
-            if (position == getItemCount() - 1)
-                return TYPE_INPUT;
-            else
-                return TYPE_DES;
-        }
-
-        @Override
-        public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            if (viewType == TYPE_INPUT)
-                return new XViewHolder(LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.item_description_input, parent, false));
-            else
-                return super.onCreateViewHolder(parent, viewType);
-        }
-
-        @Override
-        public void onBindViewHolder(XViewHolder holder, final int position) {
-            int type = getItemViewType(position);
-            if (type == TYPE_INPUT) {
-                // 初始化描述输入框
-                final EditText editText = (EditText) holder.getView(R.id.des_input);
-                editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                    @Override
-                    public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
-                        if (id == EditorInfo.IME_ACTION_GO) {
-                            XLog.d(TAG, "mDesInputView键入enter键");
-                            editText.setError(null);
-                            String des = editText.getText().toString().trim();
-                            if (!XStringUtil.isEmpty(des)) {
-                                if (!mDescriptionAdapter.getData().contains(des)) {
-                                    editText.setText(null);
-                                    mDescriptionAdapter.addData(des);
-                                    // 清楚之前选中的项目
-                                    int lastSelectedIndex = selectedIndex;
-                                    selectedIndex = -1;
-                                    mDescriptionAdapter.notifyItemChanged(lastSelectedIndex);
-                                    // 刷新用户列表
-                                    refreshFriendsList();
-                                } else {
-                                    editText.setError(getString(R.string.error_duplicate_des));
-                                }
-                            }
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-                editText.setOnKeyListener(new View.OnKeyListener() {
-                    @Override
-                    public boolean onKey(View v, int keyCode, KeyEvent event) {
-                        if (keyCode == KeyEvent.KEYCODE_DEL &&
-                                event.getAction() == KeyEvent.ACTION_UP) {
-                            XLog.d(TAG, "mDesInputView键入del键.event=" + event);
-                            String des = editText.getText().toString();
-                            if (XStringUtil.isEmpty(des) && getData().size() > 0) {
-                                if (selectedIndex == -1) {
-                                    // 选中最后一个description
-                                    selectedIndex = getData().size() - 1;
-                                    notifyItemChanged(selectedIndex);
-                                } else {
-                                    // 删除最后一个description
-                                    int deleteIndex = selectedIndex;
-                                    selectedIndex = -1;
-                                    deleteData(deleteIndex);
-                                    // 刷新用户列表
-                                    refreshFriendsList();
-                                }
-                            }
-                        }
-                        return false;
-                    }
-                });
-            } else {
-                String item = getData().get(position);
-                holder.getView(R.id.des_txt, TextView.class).setText(item);
-                if (position == selectedIndex) {
-                    holder.getView(R.id.des_txt, TextView.class)
-                            .setTextColor(getResources().getColor(R.color.white));
-                    holder.getView(R.id.des_txt).setBackgroundResource(R.color.gray);
-                } else {
-                    holder.getView(R.id.des_txt, TextView.class)
-                            .setTextColor(getResources().getColor(R.color.gray));
-                    holder.getView(R.id.des_txt).setBackgroundResource(R.color.white);
-                }
-                holder.getView(R.id.des_txt).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (selectedIndex == position) {
-                            selectedIndex = -1;
-                            notifyItemChanged(position);
-                        } else {
-                            int lastSelectedIndex = selectedIndex;
-                            selectedIndex = position;
-                            notifyItemChanged(lastSelectedIndex);
-                            notifyItemChanged(position);
-                        }
-                    }
-                });
-            }
-        }
-
-        @Override
-        public int getItemCount() {
-            return getData().size() + 1;
-        }
-    }
-
     private class UserAdapter extends RecyclerView.Adapter<XViewHolder> {
 
         private static final int TYPE_NEWER = 1;
@@ -396,7 +284,7 @@ public class SearchFriendsFragment extends Fragment {
                         }
                         // 新增一个用户
                         if (mListener != null) {
-                            ViewUtil.hidInputMethod(getActivity());
+                            ViewUtil.hideInputMethod(getActivity());
                             mListener.onFinish(true, newUser);
                         }
                     }
@@ -423,7 +311,7 @@ public class SearchFriendsFragment extends Fragment {
                     public void onClick(View v) {
                         // 选择一个用户
                         if (mListener != null) {
-                            ViewUtil.hidInputMethod(getActivity());
+                            ViewUtil.hideInputMethod(getActivity());
                             mListener.onFinish(true, user);
                         }
                     }

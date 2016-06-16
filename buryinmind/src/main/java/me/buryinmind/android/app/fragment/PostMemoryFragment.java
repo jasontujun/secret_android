@@ -120,7 +120,7 @@ public class PostMemoryFragment extends Fragment {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
                 if (id == EditorInfo.IME_ACTION_GO) {
-                    ViewUtil.hidInputMethod(getActivity());
+                    ViewUtil.hideInputMethod(getActivity());
                     mLockBtn.performClick();
                     return true;
                 }

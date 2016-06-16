@@ -3,10 +3,8 @@ package me.buryinmind.android.app.dialog;
 import android.content.Context;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.v7.widget.RecyclerView;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -18,8 +16,8 @@ import java.util.List;
 
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.model.ImageFolder;
-import me.buryinmind.android.app.uicontrol.XListAdapter;
-import me.buryinmind.android.app.uicontrol.XViewHolder;
+import me.buryinmind.android.app.adapter.XListAdapter;
+import me.buryinmind.android.app.adapter.XViewHolder;
 
 public class DirPopupWindow extends PopupWindow {
 
