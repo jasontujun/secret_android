@@ -8,7 +8,10 @@ import android.content.Context;
 import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.CycleInterpolator;
 import android.view.animation.ScaleAnimation;
+import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
@@ -68,9 +71,7 @@ public abstract class ViewUtil {
                     }
 
                     @Override
-                    public void onAnimationRepeat(Animator animation) {
-
-                    }
+                    public void onAnimationRepeat(Animator animation) {}
                 });
     }
 
@@ -109,6 +110,8 @@ public abstract class ViewUtil {
     public static void animateExpand(final View view, final boolean expand) {
         if (view == null)
             return;
+        if (view.getVisibility() == View.GONE && !expand)
+            return;
         if (expand) {
             view.setVisibility(View.VISIBLE);
         }
@@ -130,12 +133,21 @@ public abstract class ViewUtil {
             }
 
             @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
+            public void onAnimationRepeat(Animation animation) {}
         });
         view.startAnimation(scaleAnimation);
     }
+
+    public static void animationShake(View view) {
+        if (view == null)
+            return;
+        Animation shakeAnimation = new TranslateAnimation(0f, 10f, 0f, 0f);
+        shakeAnimation.setDuration(1000);
+        shakeAnimation.setInterpolator(new CycleInterpolator(5));
+        view.startAnimation(shakeAnimation);
+    }
+
+
 
     public static void showNetworkError(Context context) {
         Toast.makeText(context, R.string.error_network, Toast.LENGTH_SHORT).show();

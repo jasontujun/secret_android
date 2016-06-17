@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="5dp"
-    android:background="?attr/selectableItemBackground">
+    android:background="@drawable/bg_transparent_gray">
 
     <ImageView
         android:id="@+id/dir_item_image"

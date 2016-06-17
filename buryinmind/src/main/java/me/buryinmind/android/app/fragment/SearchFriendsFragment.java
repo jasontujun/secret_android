@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
@@ -43,14 +42,13 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * Created by jasontujun on 2016/6/5.
  */
-public class SearchFriendsFragment extends Fragment {
+public class SearchFriendsFragment extends XFragment {
     private static final String TAG = SearchFriendsFragment.class.getSimpleName();
-
-    private FragmentInteractListener mListener;
 
     private View mProgressView;
     private EditText mNameInputView;
     private RecyclerView mDescriptionList;
+    private View mDescriptionListLayout;
     private RecyclerView mFriendList;
 
     private DescriptionAdapter mDescriptionAdapter;
@@ -122,6 +120,7 @@ public class SearchFriendsFragment extends Fragment {
         mProgressView = rootView.findViewById(R.id.loading_progress);
         mNameInputView = (EditText) rootView.findViewById(R.id.receiver_name_input);
         mDescriptionList = (RecyclerView) rootView.findViewById(R.id.receiver_des_list);
+        mDescriptionListLayout = rootView.findViewById(R.id.receiver_des_list_layout);
         mFriendList = (RecyclerView) rootView.findViewById(R.id.friend_list);
 
         // 初始化朋友列表
@@ -133,7 +132,7 @@ public class SearchFriendsFragment extends Fragment {
         mNameInputView.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                XLog.d(TAG, "beforeTextChanged()");
+                XLog.d(TAG, "beforeTextChanged().s=" + s);
             }
 
             @Override
@@ -143,10 +142,10 @@ public class SearchFriendsFragment extends Fragment {
                 mNewUser.name = name;
                 if (XStringUtil.isEmpty(name)) {
                     mFriendAdapter.setNewUser(null);
-                    ViewUtil.animateFadeInOut(mDescriptionList, true);
+                    ViewUtil.animateFade(mDescriptionListLayout, true);
                 } else {
                     mFriendAdapter.setNewUser(mNewUser);
-                    ViewUtil.animateFadeInOut(mDescriptionList, false);
+                    ViewUtil.animateFade(mDescriptionListLayout, false);
                 }
                 // 刷新用户列表
                 refreshFriendsList();
@@ -154,7 +153,7 @@ public class SearchFriendsFragment extends Fragment {
 
             @Override
             public void afterTextChanged(Editable s) {
-                XLog.d(TAG, "beforeTextChanged().s=" + s);
+                XLog.d(TAG, "afterTextChanged().s=" + s);
             }
         });
         mNameInputView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -170,15 +169,13 @@ public class SearchFriendsFragment extends Fragment {
             }
         });
         if (XStringUtil.isEmpty(mNameInputView.getText().toString())) {
-            mDescriptionList.setAlpha(0f);
+            mDescriptionListLayout.setAlpha(0f);
+            mDescriptionListLayout.setVisibility(View.GONE);
         } else {
-            mDescriptionList.setAlpha(1f);
+            mDescriptionListLayout.setAlpha(1f);
+            mDescriptionListLayout.setVisibility(View.VISIBLE);
         }
         return rootView;
-    }
-
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
     }
 
     private void showProgress(boolean show) {
@@ -272,6 +269,8 @@ public class SearchFriendsFragment extends Fragment {
         public void onBindViewHolder(XViewHolder holder, int position) {
             int type = getItemViewType(position);
             if (type == TYPE_NEWER) {
+                holder.getView(R.id.new_user_prompt_txt, TextView.class).setText(
+                        String.format(getResources().getString(R.string.info_post_new_user), newUser.name));
                 holder.itemView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -280,13 +279,18 @@ public class SearchFriendsFragment extends Fragment {
                                 || newUser.descriptions.size() < 3) {
                             Toast.makeText(getActivity(), R.string.error_insufficient_des,
                                     Toast.LENGTH_SHORT).show();
+                            ViewUtil.animationShake(mDescriptionListLayout);
+                            return;
+                        }
+                        if (newUser.descriptions.size() > 7) {
+                            Toast.makeText(getActivity(), R.string.error_excessive_des,
+                                    Toast.LENGTH_SHORT).show();
+                            ViewUtil.animationShake(mDescriptionListLayout);
                             return;
                         }
                         // 新增一个用户
-                        if (mListener != null) {
-                            ViewUtil.hideInputMethod(getActivity());
-                            mListener.onFinish(true, newUser);
-                        }
+                        ViewUtil.hideInputMethod(getActivity());
+                        notifyFinish(true, newUser);
                     }
                 });
             } else {
@@ -310,10 +314,8 @@ public class SearchFriendsFragment extends Fragment {
                     @Override
                     public void onClick(View v) {
                         // 选择一个用户
-                        if (mListener != null) {
-                            ViewUtil.hideInputMethod(getActivity());
-                            mListener.onFinish(true, user);
-                        }
+                        ViewUtil.hideInputMethod(getActivity());
+                        notifyFinish(true, user);
                     }
                 });
             }

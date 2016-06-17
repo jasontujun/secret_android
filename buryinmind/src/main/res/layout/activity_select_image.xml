@@ -32,7 +32,7 @@
             android:padding="10dp"
             android:textSize="@dimen/text_size_small"
             android:textColor="@android:color/white"
-            android:background="?attr/selectableItemBackground"
+            android:background="@drawable/bg_transparent_gray"
             tools:text="@string/info_all_image"/>
 
         <TextView
@@ -45,7 +45,7 @@
             android:gravity="center"
             android:textSize="@dimen/text_size_small"
             android:textColor="@android:color/white"
-            android:background="?attr/selectableItemBackground"
+            android:background="@drawable/bg_transparent_gray"
             tools:text="完成 (1张)"/>
     </RelativeLayout>
     <RelativeLayout

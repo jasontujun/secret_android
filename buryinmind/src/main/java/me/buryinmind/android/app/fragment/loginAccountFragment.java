@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -37,13 +36,12 @@ import me.buryinmind.android.app.util.ApiUtil;
 /**
  * Created by jasontujun on 2016/4/20.
  */
-public class LoginAccountFragment extends Fragment {
+public class LoginAccountFragment extends XFragment {
 
     public static final String KEY_USER_ID = "user_id";
     public static final String KEY_USER_NAME = "user_name";
     public static final String KEY_USER_DESCRIPTION = "user_description";
 
-    private FragmentInteractListener mListener;
     private String userId;
     private String userName;
     private List<String> userDescription;
@@ -107,10 +105,6 @@ public class LoginAccountFragment extends Fragment {
         return rootView;
     }
 
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
-    }
-
     private void tryLogin() {
         if (mWaiting)
             return;
@@ -138,9 +132,7 @@ public class LoginAccountFragment extends Fragment {
             mWaiting = false;
             return;
         }
-        if (mListener != null) {
-            mListener.onLoading(true);
-        }
+        notifyLoading(true);
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.loginUser(userId, password),
                 new XJsonObjectHandler(),
@@ -149,18 +141,14 @@ public class LoginAccountFragment extends Fragment {
                     public void onNetworkError() {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_login_fail, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
@@ -178,13 +166,11 @@ public class LoginAccountFragment extends Fragment {
                         }
                         if (XStringUtil.isEmpty(token) || user == null) {
                             Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                            mListener.onFinish(false, null);
+                            notifyFinish(false, null);
                         } else {
                             GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
                             source.loginSuccess(user, token);
-                            if (mListener != null) {
-                                mListener.onFinish(true, user);
-                            }
+                            notifyFinish(true, user);
                         }
                     }
                 });

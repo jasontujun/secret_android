@@ -163,7 +163,7 @@
                         android:id="@+id/timeline_node_card_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:foreground="?attr/selectableItemBackground"
+                        android:foreground="@drawable/bg_transparent_gray"
                         app:cardCornerRadius="0dp"
                         app:elevation="5dp">
                         <LinearLayout
@@ -239,5 +239,13 @@
                 app:civ_border_width="2dp"
                 app:civ_border_color="@color/darkGray"/>
         </RelativeLayout>
+
+        <ProgressBar
+            android:id="@+id/loading_progress"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:visibility="gone"/>
     </RelativeLayout>
 </LinearLayout>

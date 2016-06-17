@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="50dp"
-    android:foreground="?attr/selectableItemBackground"
+    android:foreground="@drawable/bg_transparent_gray"
     app:cardCornerRadius="2dp"
     app:elevation="5dp">
     <TextView

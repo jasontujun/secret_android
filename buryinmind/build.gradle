@@ -40,5 +40,6 @@ dependencies {
     compile 'com.qiniu:qiniu-android-sdk:7.1.+'
     compile 'com.github.lsjwzh.RecyclerViewPager:lib:v1.1.0'
     compile "com.daimajia.swipelayout:library:1.2.0@aar"
+    compile 'com.github.chenglei1986:DatePicker:-SNAPSHOT'
     compile files('libs/xengine_android.jar')
 }

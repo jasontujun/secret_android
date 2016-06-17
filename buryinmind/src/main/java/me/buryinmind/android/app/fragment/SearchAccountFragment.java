@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Pair;
@@ -32,9 +31,7 @@ import me.buryinmind.android.app.util.ApiUtil;
 /**
  * Created by jasontujun on 2016/4/20.
  */
-public class SearchAccountFragment extends Fragment {
-
-    private FragmentInteractListener mListener;
+public class SearchAccountFragment extends XFragment {
 
     private AutoCompleteTextView mAccountInputView;
     private boolean mWaiting;
@@ -74,10 +71,6 @@ public class SearchAccountFragment extends Fragment {
         return rootView;
     }
 
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
-    }
-
     private void tryGetActiveAccountList(final boolean isRegister) {
         if (mWaiting)
             return;
@@ -100,9 +93,7 @@ public class SearchAccountFragment extends Fragment {
         ((InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE))
                 .hideSoftInputFromWindow(mAccountInputView.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         mAccountInputView.clearFocus();
-        if (mListener != null) {
-            mListener.onLoading(true);
-        }
+        notifyLoading(true);
         MyApplication.getAsyncHttp().execute(
                 isRegister ? ApiUtil.searchSeedUser(name, null)
                         : ApiUtil.searchActiveUser(name, null),
@@ -112,18 +103,14 @@ public class SearchAccountFragment extends Fragment {
                     public void onNetworkError() {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
@@ -131,9 +118,7 @@ public class SearchAccountFragment extends Fragment {
                         mWaiting = false;
                         List<User> users = User.fromJson(jsonArray);
                         Pair<Boolean, List<User>> data = new Pair<Boolean, List<User>>(isRegister, users);
-                        if (mListener != null) {
-                            mListener.onFinish(true, data);
-                        }
+                        notifyFinish(true, data);
                     }
                 });
     }

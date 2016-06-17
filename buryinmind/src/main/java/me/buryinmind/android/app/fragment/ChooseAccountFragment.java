@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -27,7 +26,7 @@ import me.buryinmind.android.app.util.ApiUtil;
 /**
  * Created by jasontujun on 2016/4/20.
  */
-public class ChooseAccountFragment extends Fragment {
+public class ChooseAccountFragment extends XFragment {
 
     public static final String KEY_ACCOUNTS = "accounts";
     public static final String KEY_GIFTS = "gifts";
@@ -38,7 +37,6 @@ public class ChooseAccountFragment extends Fragment {
     public static final int TYPE_SEED_ACCOUNT_LIST = 2;
     public static final int TYPE_GIFT_LIST = 3;
 
-    private FragmentInteractListener mListener;
     private User chooseUser;
     private List<User> accountList;
     private List<MemoryGift> giftList;
@@ -88,8 +86,7 @@ public class ChooseAccountFragment extends Fragment {
                     backButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            if (mListener != null)
-                                mListener.onBack();
+                            notifyFinish(false, null);
                         }
                     });
                 } else {
@@ -118,8 +115,7 @@ public class ChooseAccountFragment extends Fragment {
                     backButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            if (mListener != null)
-                                mListener.onBack();
+                            notifyFinish(false, null);
                         }
                     });
                     break;
@@ -129,10 +125,6 @@ public class ChooseAccountFragment extends Fragment {
                 break;
         }
         return rootView;
-    }
-
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
     }
 
     public class UserAdapter extends XListAdapter<User> {
@@ -158,9 +150,7 @@ public class ChooseAccountFragment extends Fragment {
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (mListener != null) {
-                        mListener.onFinish(true, item);
-                    }
+                    notifyFinish(true, item);
                 }
             });
         }
@@ -193,9 +183,7 @@ public class ChooseAccountFragment extends Fragment {
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (mListener != null) {
-                        mListener.onFinish(true, item);
-                    }
+                    notifyFinish(true, item);
                 }
             });
         }

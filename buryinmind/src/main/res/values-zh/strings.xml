@@ -45,6 +45,7 @@
     <string name="error_duplicate_des">描述已存在!</string>
     <string name="error_insufficient_des">抱歉，描述不得少于三个!</string>
     <string name="error_excessive_des">抱歉，描述不得多于七个!</string>
+    <string name="error_empty_qna">抱歉，寄出前这段回忆必须上锁!</string>
 
     <string name="info_press_back_again">再按一次退出程序</string>
     <string name="info_question">对你的问题:</string>
@@ -52,8 +53,9 @@
     <string name="info_activate_account">Ta们可能有和你的回忆，请选择一个并回答问题，以确认你们的关系:</string>
     <string name="info_choose_account">可能有同名用户，选择最接近自己的:</string>
     <string name="info_account_none">抱歉，还没有此用户</string>
-    <string name="info_set_birthday">首先，说出你的生日:</string>
-    <string name="info_set_birthday_btn">生日</string>
+    <string name="info_set_birthday">请设置您的生日:</string>
+    <string name="info_set_description">请设置对自己的描述，便于你的小伙伴更容易找到你(比如你的小名，家乡，学校):</string>
+    <string name="info_search_description">可以添加描述以便于更准确找到你的小伙伴(比如Ta的小名，家乡，学校):</string>
     <string name="info_timeline_header">开始的开始 &#8230;</string>
     <string name="info_timeline_footer">未完待续 &#8230;</string>
     <string name="info_add_memory">添加回忆</string>
@@ -67,7 +69,7 @@
     <string name="info_memory_sender">来自 %1$s</string>
     <string name="info_memory_author">来自:</string>
     <string name="info_memory_time">于 %1$s</string>
-    <string name="info_post_new_user">让TA加入“不忘”</string>
+    <string name="info_post_new_user">“%1$s”不在？\n把TA添加进“不忘”</string>
     <string name="info_post_lock">可以设定一个问题，来锁住回忆</string>
-    <string name="info_post_lock_required">由于接收者并不确定，必须添加一个问题，来锁住回忆</string>
+    <string name="info_post_lock_required">由于接收者并不确定，必须添加一个问题，来锁住回忆，以免被陌生人误收</string>
 </resources>

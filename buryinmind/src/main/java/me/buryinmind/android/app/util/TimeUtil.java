@@ -10,6 +10,22 @@ import java.util.TimeZone;
  */
 public abstract class TimeUtil {
 
+    /**
+     * 获取更改时区后的Unix时间戳
+     * @param time 旧时区下的Unix时间戳
+     * @param oldZone 旧时区对象
+     * @param newZone 新时区对象
+     * @return 转换后的Unix时间戳
+     */
+    public static long changeTimeZone(long time, TimeZone oldZone, TimeZone newZone) {
+        int timeOffset = oldZone.getRawOffset() - newZone.getRawOffset();
+        return time - timeOffset;
+    }
+
+    public static long changeTimeZoneToUTC(long time) {
+        return changeTimeZone(time, TimeZone.getDefault(), TimeZone.getTimeZone("GMT"));
+    }
+
     public static Calendar getCalendar(long timeInMillis) {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         calendar.setTimeInMillis(timeInMillis);

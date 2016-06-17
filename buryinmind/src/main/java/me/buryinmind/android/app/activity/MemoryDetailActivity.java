@@ -30,7 +30,8 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
-import me.buryinmind.android.app.fragment.FragmentInteractListener;
+import me.buryinmind.android.app.fragment.XBaseFragmentListener;
+import me.buryinmind.android.app.fragment.XFragmentListener;
 import me.buryinmind.android.app.fragment.MemoryDetailFragment;
 import me.buryinmind.android.app.fragment.PostMemoryFragment;
 import me.buryinmind.android.app.fragment.SearchFriendsFragment;
@@ -58,6 +59,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
     private Toolbar mToolBar;
     private MenuItem mAddBtn;
     private MenuItem mPostBtn;
+    private MenuItem mDoneBtn;
 
     private boolean mCollapsed = false;
     private Memory mMemory;
@@ -95,9 +97,6 @@ public class MemoryDetailActivity extends AppCompatActivity {
         mAppBar.addOnOffsetChangedListener(new AppBarLayout.OnOffsetChangedListener() {
             @Override
             public void onOffsetChanged(AppBarLayout appBarLayout, int verticalOffset) {
-//                XLog.d(TAG, "onOffsetChanged().verticalOffset=" + verticalOffset
-//                        + ",mToolBar.getHeight()=" + mToolBar.getHeight()
-//                        + ",mCollapsedLayout.getHeight()=" + mCollapsedLayout.getHeight());
                 if (verticalOffset <= mToolBar.getHeight() - mCollapsedLayout.getHeight()) {
                     // 已经彻底折叠
                     XLog.d(TAG, "mAppBar already collapsed");
@@ -141,13 +140,19 @@ public class MemoryDetailActivity extends AppCompatActivity {
             mAuthorLayout.setVisibility(View.GONE);
         }
 
-        if (mSecretsFragment == null) {
-            mSecretsFragment = (MemoryDetailFragment) createSecretsFragment();
-        }
-        getFragmentManager().beginTransaction()
-                .add(R.id.content_layout, mSecretsFragment)
-                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-                .commit();
+        // 为了先执行onCreateOptionsMenu(),所以延迟添加Fragment
+        mCollapsedLayout.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (mSecretsFragment == null) {
+                    mSecretsFragment = (MemoryDetailFragment) createSecretsFragment();
+                }
+                getFragmentManager().beginTransaction()
+                        .add(R.id.content_layout, mSecretsFragment)
+                        .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                        .commit();
+            }
+        }, 50);
     }
 
     @Override
@@ -156,7 +161,10 @@ public class MemoryDetailActivity extends AppCompatActivity {
         inflater.inflate(R.menu.menu_memory, menu);
         mAddBtn = menu.getItem(0);
         mPostBtn = menu.getItem(1);
+        mDoneBtn = menu.getItem(2);
+        mAddBtn.setVisible(false);
         mPostBtn.setVisible(false);
+        mDoneBtn.setVisible(false);
         return true;
     }
 
@@ -164,17 +172,17 @@ public class MemoryDetailActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                XLog.d(TAG, "click back btn!");
                 onKeyDown(KeyEvent.KEYCODE_BACK, null);
                 return true;
             case R.id.action_add:
-                XLog.d(TAG, "click add btn!");
                 Intent intent = new Intent(MemoryDetailActivity.this, ImageSelectorActivity.class);
                 startActivityForResult(intent, IMAGE_REQUEST_CODE);
                 return true;
             case  R.id.action_post:
-                XLog.d(TAG, "click post btn!");
                 goToNext(SearchFriendsFragment.class, null);
+                return true;
+            case R.id.action_done:
+                mPostFragment.confirm();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -212,19 +220,36 @@ public class MemoryDetailActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent e) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_BACK:
-                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                    backToLast();
-                } else {
-                    onBackPressed();
-                }
-                return true;
-            case KeyEvent.KEYCODE_MENU:
-                break;
+    public void onBackPressed() {
+        if (getFragmentManager().getBackStackEntryCount() > 0) {
+            getFragmentManager().popBackStack();
+        } else {
+            supportFinishAfterTransition();
         }
-        return false;
+    }
+
+    private void refreshMenu() {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        if (current == null) {
+            return;
+        }
+        if (current instanceof MemoryDetailFragment) {
+            mAddBtn.setVisible(true);
+            if (mMemory.secrets.size() > 0) {
+                mPostBtn.setVisible(true);
+            } else {
+                mPostBtn.setVisible(false);
+            }
+            mDoneBtn.setVisible(false);
+        } else if (current instanceof SearchFriendsFragment) {
+            mAddBtn.setVisible(false);
+            mPostBtn.setVisible(false);
+            mDoneBtn.setVisible(false);
+        } else if (current instanceof PostMemoryFragment) {
+            mAddBtn.setVisible(false);
+            mPostBtn.setVisible(false);
+            mDoneBtn.setVisible(true);
+        }
     }
 
     private void goToNext(Class<?> clazz, Object data) {
@@ -233,10 +258,8 @@ public class MemoryDetailActivity extends AppCompatActivity {
             return;
         if (current instanceof MemoryDetailFragment &&
                 clazz == SearchFriendsFragment.class) {
-            mPostBtn.setVisible(false);
-            collapseToolBar();
             if (mFriendsFragment == null) {
-                mFriendsFragment = (SearchFriendsFragment) createFriendsFragment();
+                mFriendsFragment = createFriendsFragment();
             }
             getFragmentManager().beginTransaction()
                     .replace(R.id.content_layout, mFriendsFragment)
@@ -245,10 +268,9 @@ public class MemoryDetailActivity extends AppCompatActivity {
                     .commit();
         } else if (current instanceof SearchFriendsFragment &&
                 clazz == PostMemoryFragment.class) {
-            expandToolBar();
             User user = (User) data;
             if (mPostFragment == null) {
-                mPostFragment = (PostMemoryFragment) createPostFragment(user);
+                mPostFragment = createPostFragment(user);
             } else {
                 mPostFragment.getArguments().putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
             }
@@ -260,38 +282,51 @@ public class MemoryDetailActivity extends AppCompatActivity {
         }
     }
 
-    private void backToLast() {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
-        if (current == null)
-            return;
-        getFragmentManager().popBackStack();
-        if (current instanceof SearchFriendsFragment) {
-            refreshShareBtn();
-            expandToolBar();
-            mSecretsFragment.needScrollToTop();
-        } else if (current instanceof PostMemoryFragment) {
-            collapseToolBar();
-        }
-    }
-
     private Fragment createSecretsFragment() {
-        Fragment fragment = new MemoryDetailFragment();
+        final MemoryDetailFragment fragment = new MemoryDetailFragment();
+        fragment.setListener(new XBaseFragmentListener() {
+            @Override
+            public void onEnter() {
+                refreshMenu();
+                mAppBar.setExpanded(true, true);
+                fragment.needScrollToTop();
+            }
+
+            @Override
+            public void onRefresh(int refreshEvent, Object data) {
+                switch (refreshEvent) {
+                    case MemoryDetailFragment.REFRESH_COLLAPSE:
+                        if (!mCollapsed) {
+                            XLog.d(TAG, "try collapseToolBar..");
+                            mAppBar.setExpanded(false, true);
+                        }
+                        break;
+                    case MemoryDetailFragment.REFRESH_EXPAND:
+                        mAppBar.setExpanded(true, true);
+                        break;
+                    case MemoryDetailFragment.REFRESH_MENU:
+                        refreshMenu();
+                        break;
+                }
+            }
+        });
         Bundle arguments = new Bundle();
         arguments.putString(MemoryDetailFragment.KEY_MID, mMemory.mid);
         fragment.setArguments(arguments);
         return fragment;
     }
 
-    private Fragment createFriendsFragment() {
+    private SearchFriendsFragment createFriendsFragment() {
         SearchFriendsFragment fragment = new SearchFriendsFragment();
         fragment.setListener(
-                new FragmentInteractListener() {
+                new XBaseFragmentListener() {
                     @Override
-                    public void onLoading(boolean show) {
-                    }
-
-                    @Override
-                    public void onBack() {
+                    public void onEnter() {
+                        refreshMenu();
+                        if (!mCollapsed) {
+                            XLog.d(TAG, "try collapseToolBar..");
+                            mAppBar.setExpanded(false, true);
+                        }
                     }
 
                     @Override
@@ -304,21 +339,20 @@ public class MemoryDetailActivity extends AppCompatActivity {
         return fragment;
     }
 
-    private Fragment createPostFragment(User user) {
+    private PostMemoryFragment createPostFragment(User user) {
         PostMemoryFragment fragment = new PostMemoryFragment();
-        fragment.setListener(new FragmentInteractListener() {
-            @Override
-            public void onLoading(boolean show) {
-            }
+        fragment.setListener(new XBaseFragmentListener() {
 
             @Override
-            public void onBack() {
+            public void onEnter() {
+                refreshMenu();
+                mAppBar.setExpanded(true, true);
             }
 
             @Override
             public void onFinish(boolean result, Object data) {
                 if (result) {
-                    // TODO 发送成功,重新进入Memory详情界面
+                    // 发送成功,重新进入Memory详情界面
                     Intent intent = new Intent(MemoryDetailActivity.this, MemoryDetailActivity.class);
                     intent.putExtra("mid", mMemory.mid);
                     startActivity(intent);
@@ -331,24 +365,5 @@ public class MemoryDetailActivity extends AppCompatActivity {
         arguments.putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
         fragment.setArguments(arguments);
         return fragment;
-    }
-
-    public void collapseToolBar() {
-        if (!mCollapsed) {
-            XLog.d(TAG, "try collapseToolBar..");
-            mAppBar.setExpanded(false, true);
-        }
-    }
-
-    public void expandToolBar() {
-        mAppBar.setExpanded(true, true);
-    }
-
-    public void refreshShareBtn() {
-        if (mMemory.secrets.size() > 0) {
-            mPostBtn.setVisible(true);
-        } else {
-            mPostBtn.setVisible(false);
-        }
     }
 }

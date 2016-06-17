@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.graphics.Canvas;
 import android.os.Bundle;
 import android.support.v4.view.MotionEventCompat;
@@ -38,7 +37,6 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
-import me.buryinmind.android.app.activity.MemoryDetailActivity;
 import me.buryinmind.android.app.controller.ProgressListener;
 import me.buryinmind.android.app.data.SecretSource;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
@@ -55,14 +53,17 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * Created by jasontujun on 2016/6/8.
  */
-public class MemoryDetailFragment extends Fragment {
+public class MemoryDetailFragment extends XFragment {
 
-    private static final String TAG = MemoryDetailActivity.class.getSimpleName();
+    private static final String TAG = MemoryDetailFragment.class.getSimpleName();
     public static final String KEY_MID = "mid";
+    public static final int REFRESH_COLLAPSE = 10;
+    public static final int REFRESH_EXPAND = 11;
+    public static final int REFRESH_MENU = 12;
 
     private View mProgressView;
-    private RecyclerView mEditableView;
-    private EditAdapter mEditAdapter;
+    private RecyclerView mSecretListView;
+    private EditAdapter mSecretAdapter;
     private ItemTouchHelper mItemTouchHelper;
 
     private Memory mMemory;
@@ -71,10 +72,10 @@ public class MemoryDetailFragment extends Fragment {
     private int mScreenWidth;
     private boolean mWaiting;
     private boolean mReorder;// 是否需要同步secret的顺序
-    private boolean needScrollToTop;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        XLog.d(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
         Bundle argument = getArguments();
         if (argument != null) {
@@ -83,7 +84,7 @@ public class MemoryDetailFragment extends Fragment {
                     XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
             mMemory = source.getById(memoryId);
         }
-        mEditAdapter = new EditAdapter(mMemory.secrets);
+        mSecretAdapter = new EditAdapter(mMemory.secrets);
         // 在onCreate时请求数据，可以避免fragment切换时过于频繁请求
         requestDetail();
     }
@@ -91,16 +92,17 @@ public class MemoryDetailFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        XLog.d(TAG, "onCreateView()");
         DisplayMetrics outMetrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(outMetrics);
         mScreenWidth = outMetrics.widthPixels;
 
         View rootView = inflater.inflate(R.layout.fragment_secret_list, container, false);
         mProgressView = rootView.findViewById(R.id.loading_progress);
-        mEditableView = (RecyclerView) rootView.findViewById(R.id.memory_secret_list);
+        mSecretListView = (RecyclerView) rootView.findViewById(R.id.memory_secret_list);
 
         // init recycler view
-        mEditableView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        mSecretListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
@@ -114,20 +116,20 @@ public class MemoryDetailFragment extends Fragment {
                     if (!mListTop) {
                         mListTop = true;
                         if (mAutoExpand) {
-                            ((MemoryDetailActivity) getActivity()).expandToolBar();
+                            notifyRefresh(REFRESH_EXPAND, null);
                         }
-                        XLog.d(TAG, "mEditableView scroll to top! expand appbar!");
+                        XLog.d(TAG, "mSecretListView scroll to top! expand appbar!");
                     } else {
-                        XLog.d(TAG, "mEditableView already scroll to top! not expand appbar!");
+                        XLog.d(TAG, "mSecretListView already scroll to top! not expand appbar!");
                     }
                 } else {
                     mListTop = false;
                 }
             }
         });
-        mEditableView.setLayoutManager(new XLinearLayoutManager(getActivity(),
+        mSecretListView.setLayoutManager(new XLinearLayoutManager(getActivity(),
                 LinearLayoutManager.VERTICAL, false));
-        mEditableView.setAdapter(mEditAdapter);
+        mSecretListView.setAdapter(mSecretAdapter);
         ItemTouchHelper.Callback mCallback = new ItemTouchHelper.SimpleCallback
                 (ItemTouchHelper.UP|ItemTouchHelper.DOWN, ItemTouchHelper.RIGHT) {
             @Override
@@ -141,15 +143,15 @@ public class MemoryDetailFragment extends Fragment {
                     //分别把中间所有的item的位置重新交换
                     for (int i = fromPosition; i < toPosition; i++) {
                         Collections.swap(mMemory.secrets, i, i + 1);
-                        Collections.swap(mEditAdapter.getData(), i, i + 1);
+                        Collections.swap(mSecretAdapter.getData(), i, i + 1);
                     }
                 } else {
                     for (int i = fromPosition; i > toPosition; i--) {
                         Collections.swap(mMemory.secrets, i, i - 1);
-                        Collections.swap(mEditAdapter.getData(), i, i - 1);
+                        Collections.swap(mSecretAdapter.getData(), i, i - 1);
                     }
                 }
-                mEditAdapter.notifyItemMoved(fromPosition, toPosition);
+                mSecretAdapter.notifyItemMoved(fromPosition, toPosition);
                 // 重新设定order值
                 for (int i = 0; i < mMemory.secrets.size(); i++) {
                     mMemory.secrets.get(i).order = i;
@@ -181,7 +183,7 @@ public class MemoryDetailFragment extends Fragment {
                                 if (!confirm) {
                                     XViewHolder holder = (XViewHolder) viewHolder;
                                     Secret secret = (Secret) holder.getData();
-                                    mEditAdapter.refreshData(secret, null);
+                                    mSecretAdapter.refreshData(secret, null);
                                 }
                             }
                         }).show(getFragmentManager(), ConfirmDialog.TAG);
@@ -212,7 +214,7 @@ public class MemoryDetailFragment extends Fragment {
                 // item拖拽被触发时
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
                     mAutoExpand = false;
-                    ((MemoryDetailActivity) getActivity()).collapseToolBar();
+                    notifyRefresh(REFRESH_COLLAPSE, null);// 通知activity收缩起来
                     XViewHolder holder = (XViewHolder) viewHolder;
                     holder.getView(R.id.secret_item_cover_layout).setVisibility(View.VISIBLE);
                 }
@@ -231,28 +233,42 @@ public class MemoryDetailFragment extends Fragment {
             }
         };
         mItemTouchHelper = new ItemTouchHelper(mCallback);
-        mItemTouchHelper.attachToRecyclerView(mEditableView);
-        // 是否需要滚动到顶部
-        if (needScrollToTop) {
-            needScrollToTop = false;
-            mEditableView.smoothScrollToPosition(0);
-        }
+        mItemTouchHelper.attachToRecyclerView(mSecretListView);
         return rootView;
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        XLog.d(TAG, "onStart()");
+    }
+
+    @Override
+    public void onStop() {
+        super.onStart();
+        XLog.d(TAG, "onStop()");
+    }
+
+    @Override
     public void onDestroyView() {
+        XLog.d(TAG, "onDestroyView()");
         super.onDestroyView();
         // 退出此界面时，同步secret顺序
         reorderSecret();
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        XLog.d(TAG, "onStart()");
+    }
+
     public void needScrollToTop() {
-        needScrollToTop = true;
+        mSecretListView.smoothScrollToPosition(0);
     }
 
     private void showProgress(final boolean show) {
-        ViewUtil.animateFadeInOut(mEditableView, show);
+        ViewUtil.animateFadeInOut(mSecretListView, show);
         ViewUtil.animateFadeInOut(mProgressView, !show);
     }
 
@@ -306,15 +322,15 @@ public class MemoryDetailFragment extends Fragment {
                                     .getSource(MyApplication.SOURCE_SECRET);
                             source.addAll(secrets);
                             mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                            ((MemoryDetailActivity) getActivity()).refreshShareBtn();
-                            mEditAdapter.setData(mMemory.secrets);
+                            notifyRefresh(REFRESH_MENU, null);
+                            mSecretAdapter.setData(mMemory.secrets);
                             // 刷新列表
                             for (Secret secret : mMemory.secrets) {
                                 // Secret文件已下载，直接显示
                                 if (!XStringUtil.isEmpty(secret.localPath)) {
                                     File file = new File(secret.localPath);
                                     if (file.exists() && file.length() == secret.size) {
-                                        mEditAdapter.refreshData(secret, null);
+                                        mSecretAdapter.refreshData(secret, null);
                                         continue;
                                     }
                                 }
@@ -325,7 +341,7 @@ public class MemoryDetailFragment extends Fragment {
                                             public void onProgress(Secret secret,
                                                                    long completeSize,
                                                                    long totalSize) {
-                                                mEditAdapter.refreshData(secret, new Object());
+                                                mSecretAdapter.refreshData(secret, new Object());
                                             }
 
                                             @Override
@@ -338,7 +354,7 @@ public class MemoryDetailFragment extends Fragment {
                                                     // 局部刷新列表的对应一项
                                                     XLog.d(TAG, "下载secret成功.id=" + secret.sid);
                                                     secret.completeSize = -1;
-                                                    mEditAdapter.refreshData(secret, null);
+                                                    mSecretAdapter.refreshData(secret, null);
                                                 }
                                             }
                                         });
@@ -389,8 +405,8 @@ public class MemoryDetailFragment extends Fragment {
                                 .getSource(MyApplication.SOURCE_SECRET);
                         source.addAll(secrets);
                         mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                        ((MemoryDetailActivity) getActivity()).refreshShareBtn();
-                        mEditAdapter.addData(secrets);
+                        notifyRefresh(REFRESH_MENU, null);
+                        mSecretAdapter.addData(secrets);
                         // 再上传图片文件
                         for (Secret secret : secrets) {
                             MyApplication.getSecretUploader().upload(secret,
@@ -399,7 +415,7 @@ public class MemoryDetailFragment extends Fragment {
                                         public void onProgress(Secret secret,
                                                                long completeSize,
                                                                long totalSize) {
-                                            mEditAdapter.refreshData(secret, new Object());
+                                            mSecretAdapter.refreshData(secret, new Object());
                                         }
 
                                         @Override
@@ -409,7 +425,7 @@ public class MemoryDetailFragment extends Fragment {
                                                         "上传Secret失败!", Toast.LENGTH_SHORT).show();
                                             }
                                             secret.completeSize = -1;
-                                            mEditAdapter.refreshData(secret, null);
+                                            mSecretAdapter.refreshData(secret, null);
                                         }
                                     });
                         }
@@ -419,7 +435,7 @@ public class MemoryDetailFragment extends Fragment {
 
     private boolean deleteSecret(final Secret secret) {
         if (mWaiting) {
-            mEditAdapter.refreshData(secret, null);
+            mSecretAdapter.refreshData(secret, null);
             return false;
         }
         mWaiting = true;
@@ -431,7 +447,7 @@ public class MemoryDetailFragment extends Fragment {
                         XLog.d(TAG, "deleteSecret onNetworkError()! sid=" + secret.sid);
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        mEditAdapter.refreshData(secret, null);
+                        mSecretAdapter.refreshData(secret, null);
                     }
 
                     @Override
@@ -439,7 +455,7 @@ public class MemoryDetailFragment extends Fragment {
                         XLog.d(TAG, "deleteSecret onFinishError()! sid=" + secret.sid);
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        mEditAdapter.refreshData(secret, null);
+                        mSecretAdapter.refreshData(secret, null);
                     }
 
                     @Override
@@ -451,7 +467,7 @@ public class MemoryDetailFragment extends Fragment {
                                 getInstance().getSource(MyApplication.SOURCE_SECRET);
                         source.deleteById(secret.getId());
                         mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                        ((MemoryDetailActivity) getActivity()).refreshShareBtn();
+                        notifyRefresh(REFRESH_MENU, null);
                         // 删除本地缓存文件
                         if (!XStringUtil.isEmpty(secret.localPath)) {
                             File cacheFile = new File(secret.localPath);
@@ -460,7 +476,7 @@ public class MemoryDetailFragment extends Fragment {
                             }
                         }
                         // 刷新列表
-                        mEditAdapter.deleteData(secret);
+                        mSecretAdapter.deleteData(secret);
                     }
                 }
         );

@@ -10,4 +10,9 @@
         android:icon="@drawable/icon_send_white"
         android:title="@string/button_post"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_done"
+        android:icon="@drawable/icon_done_white"
+        android:title="@string/button_post"
+        app:showAsAction="ifRoom" />
 </menu>

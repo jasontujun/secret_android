@@ -22,7 +22,8 @@
         android:layout_height="match_parent"
         android:layout_marginLeft="@dimen/timeline_padding"
         android:layout_marginTop="30dp"
-        android:layout_alignTop="@+id/account_head_img">
+        android:layout_alignTop="@+id/account_head_img"
+        android:visibility="gone">
         <View
             android:layout_width="2dp"
             android:layout_height="match_parent"

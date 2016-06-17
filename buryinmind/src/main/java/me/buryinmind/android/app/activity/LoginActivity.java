@@ -31,7 +31,8 @@ import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.fragment.ActivateAccountFragment;
 import me.buryinmind.android.app.fragment.AnswerAccountFragment;
 import me.buryinmind.android.app.fragment.ChooseAccountFragment;
-import me.buryinmind.android.app.fragment.FragmentInteractListener;
+import me.buryinmind.android.app.fragment.XBaseFragmentListener;
+import me.buryinmind.android.app.fragment.XFragmentListener;
 import me.buryinmind.android.app.fragment.LoginAccountFragment;
 import me.buryinmind.android.app.fragment.SearchAccountFragment;
 import me.buryinmind.android.app.model.MemoryGift;
@@ -131,29 +132,21 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent e) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_BACK:
-                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                    getFragmentManager().popBackStack();
-                    return false;
-                } else {
-                    // 点击2次退出
-                    long currentTime = System.currentTimeMillis();
-                    GlobalSource source = (GlobalSource) XDefaultDataRepo
-                            .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-                    if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
-                        finish();
-                    } else {
-                        source.setLastBackTime(currentTime);
-                        Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
-                }
-            case KeyEvent.KEYCODE_MENU:
-                break;
+    public void onBackPressed() {
+        if (getFragmentManager().getBackStackEntryCount() > 0) {
+            getFragmentManager().popBackStack();
+        } else {
+            // 点击2次退出
+            long currentTime = System.currentTimeMillis();
+            GlobalSource source = (GlobalSource) XDefaultDataRepo
+                    .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+            if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
+                supportFinishAfterTransition();
+            } else {
+                source.setLastBackTime(currentTime);
+                Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
+            }
         }
-        return false;
     }
 
     private Fragment createFragment(final int step) {
@@ -163,18 +156,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_START:
                 fragment = new SearchAccountFragment();
                 ((SearchAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -195,6 +180,10 @@ public class LoginActivity extends AppCompatActivity {
                                                 .addToBackStack(null)
                                                 .commit();
                                     }
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
+                                    }
                                 }
                             }
                         });
@@ -202,18 +191,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_LOGIN_LIST:
                 fragment = new ChooseAccountFragment();
                 ((ChooseAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -225,7 +206,10 @@ public class LoginActivity extends AppCompatActivity {
                                             .replace(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                             .addToBackStack(null)
                                             .commit();
-
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
+                                    }
                                 }
                             }
                         });
@@ -237,18 +221,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_LOGIN_HAS_USER:
                 fragment = new LoginAccountFragment();
                 ((LoginAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -257,6 +233,10 @@ public class LoginActivity extends AppCompatActivity {
                                 if (result) {
                                     // 进入MainActivity
                                     enterMainActivity();
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
+                                    }
                                 }
                             }
                         });
@@ -275,18 +255,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_ACTIVATE_USERS:
                 fragment = new ChooseAccountFragment();
                 ((ChooseAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -313,6 +285,10 @@ public class LoginActivity extends AppCompatActivity {
                                                             .commit();
                                                 }
                                             });
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
+                                    }
                                 }
                             }
                         });
@@ -324,18 +300,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_ACTIVATE_GIFTS:
                 fragment = new ChooseAccountFragment();
                 ((ChooseAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -348,6 +316,10 @@ public class LoginActivity extends AppCompatActivity {
                                             .addToBackStack(null)
                                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
+                                    }
                                 }
                             }
                         });
@@ -361,18 +333,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_ACTIVATE_ANSWER:
                 fragment = new AnswerAccountFragment();
                 ((AnswerAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -385,6 +349,10 @@ public class LoginActivity extends AppCompatActivity {
                                             .addToBackStack(null)
                                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
+                                    }
                                 }
                             }
                         });
@@ -393,18 +361,10 @@ public class LoginActivity extends AppCompatActivity {
             case STEP_ACTIVATE_PASSWORD:
                 fragment = new ActivateAccountFragment();
                 ((ActivateAccountFragment) fragment).setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
-                            }
-
-                            @Override
-                            public void onBack() {
-                                showProgress(false);
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    getFragmentManager().popBackStack();
-                                }
                             }
 
                             @Override
@@ -424,6 +384,10 @@ public class LoginActivity extends AppCompatActivity {
                                     } else {
                                         // 进入MainActivity
                                         enterMainActivity();
+                                    }
+                                } else {
+                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
+                                        getFragmentManager().popBackStack();
                                     }
                                 }
                             }

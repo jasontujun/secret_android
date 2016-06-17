@@ -9,25 +9,14 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.view.inputmethod.EditorInfo;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,62 +24,41 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.daimajia.swipe.SimpleSwipeListener;
-import com.daimajia.swipe.SwipeLayout;
-import com.fourmob.datetimepicker.date.DatePickerDialog;
 import com.qiniu.android.http.ResponseInfo;
 import com.qiniu.android.storage.UpCompletionHandler;
 import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadOptions;
-import com.tj.xengine.android.data.listener.XHandlerIdDataSourceListener;
-import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.android.utils.XStorageUtil;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
-import me.buryinmind.android.app.controller.ResultListener;
 import me.buryinmind.android.app.data.GlobalSource;
-import me.buryinmind.android.app.dialog.AddMemoryDialog;
-import me.buryinmind.android.app.dialog.ConfirmDialog;
-import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.fragment.AddMemoryFragment;
 import me.buryinmind.android.app.fragment.BirthdayFragment;
 import me.buryinmind.android.app.fragment.EditDescriptionFragment;
-import me.buryinmind.android.app.fragment.FragmentInteractListener;
+import me.buryinmind.android.app.fragment.XBaseFragmentListener;
 import me.buryinmind.android.app.fragment.TimelineFragment;
-import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.User;
-import me.buryinmind.android.app.uicontrol.XLinearLayoutManager;
-import me.buryinmind.android.app.uicontrol.XParticleLayout;
-import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.FileUtils;
 import me.buryinmind.android.app.util.ImageUtil;
-import me.buryinmind.android.app.util.TimeUtil;
 import me.buryinmind.android.app.util.ViewUtil;
 
 public class TimelineActivity extends AppCompatActivity {
 
-    private static final String TAG = "BIM_MainActivity";
+    private static final String TAG = TimelineActivity.class.getSimpleName();
 
     private static final int HEADER_REQUEST_CODE = 8090;
     private static final long MAX_IMAGE_SIZE = 100 * 1024;// 图片大小上限100K
@@ -119,6 +87,7 @@ public class TimelineActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        XLog.d(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_timeline);
 
@@ -155,7 +124,15 @@ public class TimelineActivity extends AppCompatActivity {
         mAccountHeadView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                clickHead(v);
+                // 选择图片，并上传
+                Intent target = FileUtils.createGetContentIntent();
+                Intent intent = Intent.createChooser(target, getString(R.string.info_choose_head));
+                try {
+                    startActivityForResult(intent, HEADER_REQUEST_CODE);
+                } catch (ActivityNotFoundException ex) {
+                    Toast.makeText(TimelineActivity.this, getString(R.string.error_select_picture),
+                            Toast.LENGTH_LONG).show();
+                }
             }
         });
         showProfilePicture(ApiUtil.getIdUrl(user.uid));
@@ -169,42 +146,59 @@ public class TimelineActivity extends AppCompatActivity {
             }
         });
 
-        // init first ui
-        if (user.bornTime == 0) {
-            // TODO 先设置生日，再进入时间线
-        } else {
-            // 进入时间线
-            goToNext(TimelineFragment.class);
-        }
+        // 为了先执行onCreateOptionsMenu(),所以延迟添加Fragment
+        mContentView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // init first ui
+                if (user.bornTime == 0) {
+                    // 先设置生日，再进入时间线
+                    goToNext(BirthdayFragment.class);
+                } else {
+                    // 进入时间线
+                    goToNext(TimelineFragment.class);
+                }
+            }
+        }, 50);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        XLog.d(TAG, "onCreateOptionsMenu()");
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_timeline, menu);
         mLogoutBtn = menu.getItem(0);
         mNextBtn = menu.getItem(1);
         mDoneBtn = menu.getItem(2);
+        mLogoutBtn.setVisible(false);
+        mNextBtn.setVisible(false);
+        mDoneBtn.setVisible(false);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
         switch (item.getItemId()) {
             case android.R.id.home:
-                return true;
+                if (current != null && !(current instanceof TimelineFragment)) {
+                    onKeyDown(KeyEvent.KEYCODE_BACK, null);
+                    return true;
+                } else {
+                    return super.onOptionsItemSelected(item);
+                }
             case R.id.action_logout:
                 logoutAccount();
                 return true;
             case R.id.action_next:
                 return true;
             case R.id.action_done:
-                Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
                 if (current != null) {
                     if (current instanceof BirthdayFragment) {
-                    } else if (current instanceof  EditDescriptionFragment) {
-
-                    } else if (current instanceof  AddMemoryFragment) {
+                        mBirthDayFragment.confirm();
+                    } else if (current instanceof EditDescriptionFragment) {
+                        mEditDesFragment.confirm();
+                    } else if (current instanceof AddMemoryFragment) {
 
                     }
                 }
@@ -224,29 +218,22 @@ public class TimelineActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent e) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_BACK:
-                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                    backToLast();
-                } else {
-                    // 点击2次退出
-                    long currentTime = System.currentTimeMillis();
-                    GlobalSource source = (GlobalSource) XDefaultDataRepo
-                            .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-                    if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
-                        finish();
-                    } else {
-                        source.setLastBackTime(currentTime);
-                        Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
-                }
-                return true;
-            case KeyEvent.KEYCODE_MENU:
-                break;
+    public void onBackPressed() {
+        if (getFragmentManager().getBackStackEntryCount() > 0) {
+            showProgress(false);
+            getFragmentManager().popBackStack();
+        } else {
+            // 点击2次退出
+            long currentTime = System.currentTimeMillis();
+            GlobalSource source = (GlobalSource) XDefaultDataRepo
+                    .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+            if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
+                supportFinishAfterTransition();
+            } else {
+                source.setLastBackTime(currentTime);
+                Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
+            }
         }
-        return false;
     }
 
     @Override
@@ -312,34 +299,23 @@ public class TimelineActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    public void clickHead(View view) {
-        // 选择图片，并上传
-        Intent target = FileUtils.createGetContentIntent();
-        Intent intent = Intent.createChooser(target, this.getString(R.string.info_choose_head));
-        try {
-            startActivityForResult(intent, HEADER_REQUEST_CODE);
-        } catch (ActivityNotFoundException ex) {
-            Toast.makeText(this, getString(R.string.error_select_picture),
-                    Toast.LENGTH_LONG).show();
+    private void refreshToolBar() {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        if (current == null) {
+            return;
         }
-    }
-
-    public void collapseToolBar() {
-        if (!mCollapsed) {
-            XLog.d(TAG, "try collapseToolBar..");
-            mAppBar.setExpanded(false, true);
-        }
-    }
-
-    public void expandToolBar() {
-        mAppBar.setExpanded(true, true);
-    }
-
-    public void setToolBar(boolean back) {
-        if (back) {
-            mToolBar.setLogo(R.drawable.icon_arrow_back_white);
+        if (current instanceof TimelineFragment) {
+            mToolBar.setNavigationIcon(R.drawable.logo_buryinmind_white_small);
+            mToolBar.setTitle(R.string.app_name);
+            mLogoutBtn.setVisible(true);
+            mNextBtn.setVisible(false);
+            mDoneBtn.setVisible(false);
         } else {
-            mToolBar.setLogo(R.drawable.logo_buryinmind_white_small);
+            mToolBar.setNavigationIcon(R.drawable.icon_arrow_back_white);
+            mToolBar.setTitle(null);
+            mLogoutBtn.setVisible(false);
+            mNextBtn.setVisible(false);
+            mDoneBtn.setVisible(true);
         }
     }
 
@@ -449,48 +425,72 @@ public class TimelineActivity extends AppCompatActivity {
 
 
     private void goToNext(Class<?> clazz) {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        final Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
         if (clazz == TimelineFragment.class) {
             if (mTimelineFragment == null) {
                 mTimelineFragment = new TimelineFragment();
-                mTimelineFragment.setListener(new FragmentInteractListener() {
+                mTimelineFragment.setListener(new XBaseFragmentListener() {
+                    @Override
+                    public void onEnter() {
+                        refreshToolBar();
+                        ViewUtil.animateExpand(mAccountLine, true);
+                        ViewUtil.animateFadeInOut(mAccountDesView, false);
+                        mAppBar.setExpanded(true, true);
+                        mTimelineFragment.needScrollToTop();
+                    }
+
                     @Override
                     public void onLoading(boolean show) {
                         showProgress(show);
                     }
 
                     @Override
-                    public void onBack() {}
-
-                    @Override
-                    public void onFinish(boolean result, Object data) {}
+                    public void onRefresh(int refreshEvent, Object data) {
+                        switch (refreshEvent) {
+                            case TimelineFragment.REFRESH_EXPAND:
+                                mAppBar.setExpanded(true, true);
+                                break;
+                            case TimelineFragment.REFRESH_SET_BIRTHDAY:
+                                goToNext(BirthdayFragment.class);
+                                break;
+                        }
+                    }
                 });
             }
             getFragmentManager().beginTransaction()
                     .replace(R.id.content_layout, mTimelineFragment)
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                     .commit();
-            mAccountLine.setVisibility(View.VISIBLE);
         } else if (clazz == BirthdayFragment.class) {
-            ViewUtil.animateExpand(mAccountLine, false);
             if (mBirthDayFragment == null) {
                 mBirthDayFragment = new BirthdayFragment();
-                mBirthDayFragment.setListener(new FragmentInteractListener() {
-                    @Override
-                    public void onLoading(boolean show) {
-                        showProgress(show);
-                    }
-
-                    @Override
-                    public void onBack() {
-                    }
-
-                    @Override
-                    public void onFinish(boolean result, Object data) {
-
-                    }
-                });
             }
+            mBirthDayFragment.setListener(new XBaseFragmentListener() {
+                @Override
+                public void onEnter() {
+                    refreshToolBar();
+                    if (!mCollapsed) {
+                        mAppBar.setExpanded(false, true);
+                    }
+                    ViewUtil.animateExpand(mAccountLine, false);
+                }
+
+                @Override
+                public void onLoading(boolean show) {
+                    showProgress(show);
+                }
+
+                @Override
+                public void onFinish(boolean result, Object data) {
+                    showProgress(false);
+                    if (current == null) {
+                        goToNext(TimelineFragment.class);
+                    } else {
+                        // 模拟返回按钮
+                        onKeyDown(KeyEvent.KEYCODE_BACK, null);
+                    }
+                }
+            });
             if (current == null) {
                 getFragmentManager().beginTransaction()
                         .replace(R.id.content_layout, mBirthDayFragment)
@@ -505,31 +505,34 @@ public class TimelineActivity extends AppCompatActivity {
             }
         } else if (current instanceof TimelineFragment &&
                 clazz == EditDescriptionFragment.class) {
-            expandToolBar();
-            ViewUtil.animateExpand(mAccountLine, false);
             if (mEditDesFragment == null) {
                 mEditDesFragment = new EditDescriptionFragment();
                 mEditDesFragment.setListener(
-                        new FragmentInteractListener() {
+                        new XBaseFragmentListener() {
+                            @Override
+                            public void onEnter() {
+                                refreshToolBar();
+                                mAppBar.setExpanded(false, true);
+                                ViewUtil.animateExpand(mAccountLine, false);
+                                ViewUtil.animateFadeInOut(mAccountDesView, true);
+                            }
+
                             @Override
                             public void onLoading(boolean show) {
                                 showProgress(show);
                             }
 
                             @Override
-                            public void onBack() {}
-
-                            @Override
                             public void onFinish(boolean result, Object data) {
-                                if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                    backToLast();
-                                }
-                                if (result) {
+                                showProgress(false);
+                                if (result && data != null) {
+                                    // 刷新用户的description
                                     final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
                                             .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-                                    user.descriptions = (List<String>) data;
                                     mAccountDesView.setText(XStringUtil.list2String(user.descriptions, ", "));
                                 }
+                                // 模拟返回按钮
+                                onKeyDown(KeyEvent.KEYCODE_BACK, null);
                             }
                         });
             }
@@ -540,36 +543,25 @@ public class TimelineActivity extends AppCompatActivity {
                     .commit();
         } else if (current instanceof TimelineFragment &&
                 clazz == AddMemoryFragment.class) {
-//            mAccountLine.setVisibility(View.GONE);
-            ViewUtil.animateExpand(mAccountLine, false);
             if (mAddFragment == null) {
                 mAddFragment = new AddMemoryFragment();
+                mEditDesFragment.setListener(
+                        new XBaseFragmentListener() {
+                            @Override
+                            public void onEnter() {
+                                refreshToolBar();
+                                if (!mCollapsed) {
+                                    mAppBar.setExpanded(false, true);
+                                }
+                                ViewUtil.animateExpand(mAccountLine, false);
+                            }
+                        });
             }
             getFragmentManager().beginTransaction()
                     .replace(R.id.content_layout, mAddFragment)
                     .addToBackStack(null)
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                     .commit();
-        }
-    }
-
-    private void backToLast() {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
-        if (current == null)
-            return;
-        getFragmentManager().popBackStack();
-        if (current instanceof BirthdayFragment) {
-            ViewUtil.animateExpand(mAccountLine, true);
-//            mAccountLine.setVisibility(View.VISIBLE);
-//            expandToolBar();
-        } else if (current instanceof EditDescriptionFragment) {
-            ViewUtil.animateExpand(mAccountLine, true);
-//            mAccountLine.setVisibility(View.VISIBLE);
-//            collapseToolBar();
-        } else if (current instanceof AddMemoryFragment) {
-            ViewUtil.animateExpand(mAccountLine, true);
-//            mAccountLine.setVisibility(View.VISIBLE);
-//            collapseToolBar();
         }
     }
 }

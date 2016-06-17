@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.view.ViewCompat;
@@ -43,12 +42,10 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.activity.MemoryDetailActivity;
-import me.buryinmind.android.app.activity.TimelineActivity;
 import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.controller.ResultListener;
 import me.buryinmind.android.app.data.GlobalSource;
@@ -66,11 +63,12 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * Created by jasontujun on 2016/6/15.
  */
-public class TimelineFragment extends Fragment {
+public class TimelineFragment extends XFragment {
 
     private static final String TAG = "BIM_MainActivity";
-
-    private FragmentInteractListener mListener;
+    public static final int REFRESH_EXPAND = 11;
+    public static final int REFRESH_SET_BIRTHDAY = 21;
+    public static final int REFRESH_ADD_MEMORY = 31;
 
     private XListIdDataSourceImpl<Memory> mMemorySource;
     private RecyclerView mTimelineView;
@@ -150,7 +148,7 @@ public class TimelineFragment extends Fragment {
                 if (!ViewCompat.canScrollVertically(recyclerView, -1)) {
                     if (!mListTop) {
                         mListTop = true;
-                        ((TimelineActivity) getActivity()).expandToolBar();
+                        notifyRefresh(REFRESH_EXPAND, null);
                         XLog.d(TAG, "mTimelineView scroll to top! expand appbar!");
                     } else {
                         XLog.d(TAG, "mTimelineView already scroll to top! not expand appbar!");
@@ -177,8 +175,7 @@ public class TimelineFragment extends Fragment {
                             String name = (String) result[0];
                             Calendar date = (Calendar) result[1];
                             // 统一改成GMT时区,再上传服务器
-                            date.setTimeZone(TimeZone.getTimeZone("GMT"));
-                            addMemory(name, date.getTimeInMillis());
+                            addMemory(name, TimeUtil.changeTimeZoneToUTC(date.getTimeInMillis()));
                         }
 
                         @Override
@@ -190,23 +187,19 @@ public class TimelineFragment extends Fragment {
                         }
                     }).show(((AppCompatActivity) getActivity()).getSupportFragmentManager(), AddMemoryDialog.TAG);
                 }
+                // TODO 跳转到AddMemoryFragment
+                notifyRefresh(REFRESH_SET_BIRTHDAY, null);
             }
         });
 
         return rootView;
     }
 
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
-    }
-
     private void requestMemoryList() {
         if (mWaiting)
             return;
         mWaiting = true;
-        if (mListener != null) {
-            mListener.onLoading(true);
-        }
+        notifyLoading(true);
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.getMemoryList(),
                 new XJsonArrayHandler(),
@@ -214,27 +207,21 @@ public class TimelineFragment extends Fragment {
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
-                        if (mListener != null) {
-                            mListener.onLoading(false);
-                        }
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
-                        if (mListener != null) {
-                            mListener.onLoading(false);
-                        }
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray jsonArray) {
                         mWaiting = false;
-                        if (mListener != null) {
-                            mListener.onLoading(false);
-                        }
+                        notifyLoading(false);
                         List<Memory> memories = Memory.fromJson(jsonArray);
                         if (memories != null && memories.size() > 0) {
                             mMemorySource.addAll(memories);
@@ -288,18 +275,16 @@ public class TimelineFragment extends Fragment {
                 new XAsyncHttp.Listener() {
                     @Override
                     public void onNetworkError() {
-                        XLog.d(TAG, "deleteMemory onNetworkError()! mid=" + memory.mid);
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        mAdapter.resetData(memory);
+                        mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
-                        XLog.d(TAG, "deleteMemory onFinishError()! mid=" + memory.mid);
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        mAdapter.resetData(memory);
+                        mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
@@ -358,8 +343,7 @@ public class TimelineFragment extends Fragment {
                 });
     }
 
-    private void receiveMemory(final Memory memory, String gid, String answer,
-                               final ResultListener<Memory> listener) {
+    private void receiveMemory(final Memory memory, String gid, String answer, final Runnable postExecutor) {
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.receiveMemory(gid, answer),
                 new XJsonObjectHandler(),
@@ -367,16 +351,12 @@ public class TimelineFragment extends Fragment {
                     @Override
                     public void onNetworkError() {
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        if (listener != null) {
-                            listener.onResult(false, null);
-                        }
+                        mAdapter.removeLoadingItem(memory);
                     }
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        if (listener != null) {
-                            listener.onResult(false, null);
-                        }
+                        mAdapter.removeLoadingItem(memory);
                     }
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
@@ -387,9 +367,9 @@ public class TimelineFragment extends Fragment {
                                     .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
                             memory.ownerId = user.uid;
                             memory.ownerName = user.name;
-                            mAdapter.resetData(memory);
-                            if (listener != null) {
-                                listener.onResult(true, memory);
+                            mAdapter.removeLoadingItem(memory);
+                            if (postExecutor != null) {
+                                postExecutor.run();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -397,6 +377,35 @@ public class TimelineFragment extends Fragment {
                     }
                 });
     }
+
+    private void rejectMemory(final Memory memory, String gid) {
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.rejectMemory(gid),
+                new XAsyncHttp.Listener() {
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
+                        mAdapter.removeLoadingItem(memory);
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        mAdapter.removeLoadingItem(memory);
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                        mAdapter.removeLoadingItem(memory);
+                        mMemorySource.deleteById(memory.mid);
+                    }
+                });
+    }
+
+    public void needScrollToTop() {
+        mTimelineView.smoothScrollToPosition(0);
+    }
+
 
     private class TimelineAdapter extends RecyclerView.Adapter<XViewHolder> {
 
@@ -408,17 +417,17 @@ public class TimelineFragment extends Fragment {
 
         private Map<Integer, Memory> mAges;
         private List<Memory> mItems;
-        private List<Memory> mToBeDelete;
+        private List<Memory> mLoadingItems;
 
         public TimelineAdapter(List<Memory> items) {
             mAges = new HashMap<Integer, Memory>();
-            mToBeDelete = new ArrayList<Memory>();
+            mLoadingItems = new ArrayList<Memory>();
             setData(items);
         }
 
         public void setData(final List<Memory> memories) {
             mItems = memories;
-            mToBeDelete.clear();
+            mLoadingItems.clear();
             mAges.clear();
             for (Memory memory : memories) {
                 if (!mAges.containsKey(memory.age)) {
@@ -426,15 +435,6 @@ public class TimelineFragment extends Fragment {
                 }
             }
             notifyDataSetChanged();
-        }
-
-        public void resetData(Memory memory) {
-            mToBeDelete.remove(memory);
-            int pos = mItems.indexOf(memory);
-            if (pos == -1) {
-                return;
-            }
-            notifyItemChanged(pos + 1);
         }
 
         public void addData(int pos, Memory memory) {
@@ -458,7 +458,7 @@ public class TimelineFragment extends Fragment {
                 return;
             }
             mItems.remove(memory);
-            mToBeDelete.remove(memory);
+            mLoadingItems.remove(memory);
             if (memory.equals(mAges.get(memory.age))) {
                 boolean needRemove = true;
                 for (Memory item : mItems) {
@@ -474,6 +474,27 @@ public class TimelineFragment extends Fragment {
             }
             notifyItemRemoved(pos + 1);
             notifyItemRangeChanged(pos + 1, Math.min(2, mItems.size() - (pos + 1)));
+        }
+
+        public void addLoadingItem(Memory memory) {
+            int pos = mItems.indexOf(memory);
+            if (pos == -1) {
+                return;
+            }
+            if (!mLoadingItems.contains(memory)) {
+                mLoadingItems.add(memory);
+                notifyItemChanged(pos + 1);
+            }
+        }
+
+        public void removeLoadingItem(Memory memory) {
+            int pos = mItems.indexOf(memory);
+            if (pos == -1) {
+                return;
+            }
+            if (mLoadingItems.remove(memory)) {
+                notifyItemChanged(pos + 1);
+            }
         }
 
         @Override
@@ -510,12 +531,13 @@ public class TimelineFragment extends Fragment {
                         new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Calendar lastBornTime = TimeUtil.getCalendar(user.bornTime);
-                                // TODO 跳转到生日设置的fragment
+                                // 跳转到生日设置的fragment
+                                notifyRefresh(REFRESH_SET_BIRTHDAY, null);
                             }
                         });
+                Calendar birth = TimeUtil.getCalendar(user.bornTime);
                 holder.getView(R.id.timeline_header_time, TextView.class)
-                        .setText(XStringUtil.calendar2str(TimeUtil.getCalendar(user.bornTime), "."));
+                        .setText(XStringUtil.calendar2str(birth, "."));
             } else if (type == TYPE_FOOTER) {
                 holder.getView(R.id.timeline_footer_txt).setOnClickListener(
                         new View.OnClickListener() {
@@ -526,6 +548,7 @@ public class TimelineFragment extends Fragment {
                         });
             } else {
                 final Memory item = mItems.get(position - 1);
+                // 设置age标签
                 if (item.age > 0 && mAges.get(item.age).equals(item)) {
                     holder.getView(R.id.timeline_tag, TextView.class)
                             .setText(String.valueOf(item.age));
@@ -533,8 +556,12 @@ public class TimelineFragment extends Fragment {
                 }else {
                     holder.getView(R.id.timeline_tag_layout).setVisibility(View.GONE);
                 }
-                // 如果不是自己的回忆,显示赠送者头像
+                // 设置头像。如果不是自己的回忆,显示赠送者头像
                 if (!user.uid.equals(item.authorId)) {
+                    holder.getView(R.id.timeline_sender_name).setVisibility(View.VISIBLE);
+                    holder.getView(R.id.timeline_sender_name, TextView.class).setText(
+                            String.format(getResources().getString(R.string.info_memory_sender),
+                                    item.authorName));
                     holder.getView(R.id.timeline_sender_head).setVisibility(View.VISIBLE);
                     Glide.with(TimelineFragment.this)
                             .load(ApiUtil.getIdUrl(item.authorId))
@@ -548,31 +575,22 @@ public class TimelineFragment extends Fragment {
                         holder.getView(R.id.timeline_sender_head).setAnimation(null);
                     }
                 } else {
+                    holder.getView(R.id.timeline_sender_name).setVisibility(View.GONE);
                     holder.getView(R.id.timeline_sender_head).setVisibility(View.GONE);
                     holder.getView(R.id.timeline_sender_head).setAnimation(null);
                 }
                 final XParticleLayout particleLayout = (XParticleLayout) holder.getView(R.id.timeline_node_layout);
-                if (mToBeDelete.contains(item)) {
-                    // 正在删除的条目，不显示内容，也不能点击
+                // 正在loading的条目，不显示内容，也不能点击
+                if (mLoadingItems.contains(item)) {
+                    holder.getView(R.id.loading_progress).setVisibility(View.VISIBLE);
+                    holder.getView(R.id.timeline_node_swipe_layout).setVisibility(View.GONE);
                     particleLayout.hide();
                     particleLayout.setOnClickListener(null);
-                } else {
-                    holder.getView(R.id.timeline_node_txt, TextView.class).setText(item.name);
-                    holder.getView(R.id.timeline_node_date, TextView.class).setText(
-                            XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenTime), "."));
-                    ImageView memoryImage = (ImageView) holder.getView(R.id.timeline_node_img);
-                    if (!XStringUtil.isEmpty(item.coverUrl)) {
-                        memoryImage.setVisibility(View.VISIBLE);
-                        Glide.with(TimelineFragment.this)
-                                .load(item.coverUrl)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .placeholder(R.color.darkGray)
-                                .error(R.color.darkGray)
-                                .into(memoryImage);
-                    } else {
-                        memoryImage.setVisibility(View.GONE);
-                    }
+                }
+                // 非loading的条目，正常显示和点击
+                else {
                     // 设置粒子效果图层
+                    holder.getView(R.id.loading_progress).setVisibility(View.GONE);
                     particleLayout.setParticle(R.drawable.particle_star);
                     particleLayout.reset();
                     particleLayout.setListener(new XParticleLayout.Listener() {
@@ -595,8 +613,8 @@ public class TimelineFragment extends Fragment {
                                         public void onDone(Object... result) {
                                             confirm = (boolean) result[0];
                                             if (confirm) {
-                                                mToBeDelete.add(item);
-                                                particleLayout.setOnClickListener(null);
+                                                addLoadingItem(item);
+                                                // 删除memory
                                                 deleteMemory(item);
                                             }
                                         }
@@ -615,10 +633,26 @@ public class TimelineFragment extends Fragment {
                         }
                     });
                     XLog.d(TAG, "onBindViewHolder. position=" + position);
-                    final SwipeLayout swipeLayout = (SwipeLayout) holder.getView(R.id.timeline_node_swipe_layout);
+                    // 设置memory信息
+                    holder.getView(R.id.timeline_node_txt, TextView.class).setText(item.name);
+                    holder.getView(R.id.timeline_node_date, TextView.class).setText(
+                            XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenTime), "."));
+                    ImageView memoryImage = (ImageView) holder.getView(R.id.timeline_node_img);
+                    if (!XStringUtil.isEmpty(item.coverUrl)) {
+                        memoryImage.setVisibility(View.VISIBLE);
+                        Glide.with(TimelineFragment.this)
+                                .load(item.coverUrl)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .placeholder(R.color.darkGray)
+                                .error(R.color.darkGray)
+                                .into(memoryImage);
+                    } else {
+                        memoryImage.setVisibility(View.GONE);
+                    }
                     // 是自己的或已接收的回忆
+                    final SwipeLayout swipeLayout = (SwipeLayout) holder.getView(R.id.timeline_node_swipe_layout);
+                    swipeLayout.setVisibility(View.VISIBLE);
                     if (item.inGift == null) {
-                        holder.getView(R.id.timeline_sender_name).setVisibility(View.GONE);
                         holder.getView(R.id.timeline_node_lock).setVisibility(View.GONE);
                         holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.GONE);
                         swipeLayout.setSwipeEnabled(false);
@@ -635,10 +669,6 @@ public class TimelineFragment extends Fragment {
                     }
                     // 是未接收的回忆
                     else {
-                        holder.getView(R.id.timeline_sender_name).setVisibility(View.VISIBLE);
-                        holder.getView(R.id.timeline_sender_name, TextView.class).setText(
-                                String.format(getResources().getString(R.string.info_memory_sender),
-                                        item.inGift.senderName));
                         // 没有设锁的回忆
                         if (XStringUtil.isEmpty(item.inGift.question)) {
                             holder.getView(R.id.timeline_node_lock).setVisibility(View.GONE);
@@ -649,17 +679,16 @@ public class TimelineFragment extends Fragment {
                                     new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
+                                            addLoadingItem(item);
                                             // 第一次点击进去表示解锁并接收Memory,通知服务器
                                             receiveMemory(item, item.inGift.gid, null,
-                                                    new ResultListener<Memory>() {
+                                                    new Runnable() {
                                                         @Override
-                                                        public void onResult(boolean result, Memory data) {
-                                                            if (result) {
-                                                                Intent intent = new Intent(getActivity(),
-                                                                        MemoryDetailActivity.class);
-                                                                intent.putExtra("mid", data.mid);
-                                                                startActivity(intent);
-                                                            }
+                                                        public void run() {
+                                                            Intent intent = new Intent(getActivity(),
+                                                                    MemoryDetailActivity.class);
+                                                            intent.putExtra("mid", item.mid);
+                                                            startActivity(intent);
                                                         }
                                                     });
                                         }
@@ -698,6 +727,7 @@ public class TimelineFragment extends Fragment {
                                         return;
                                     }
                                     swipeLayout.toggle(true);
+                                    addLoadingItem(item);
                                     // 解锁并接收Memory
                                     receiveMemory(item, item.inGift.gid, answer, null);
                                 }
@@ -705,8 +735,10 @@ public class TimelineFragment extends Fragment {
                             holder.getView(R.id.timeline_node_ignore_btn).setOnClickListener(new View.OnClickListener() {
                                 @Override
                                 public void onClick(View v) {
-                                    // TODO 忽略此Memory
+                                    // 拒绝此Memory
                                     swipeLayout.toggle(true);
+                                    addLoadingItem(item);
+                                    rejectMemory(item, item.inGift.gid);
                                 }
                             });
                             answerInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {

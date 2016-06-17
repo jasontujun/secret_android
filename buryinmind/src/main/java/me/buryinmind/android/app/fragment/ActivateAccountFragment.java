@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -34,12 +33,11 @@ import me.buryinmind.android.app.util.ApiUtil;
 /**
  * Created by jasontujun on 2016/4/20.
  */
-public class ActivateAccountFragment extends Fragment {
+public class ActivateAccountFragment extends XFragment {
 
     public static final String KEY_GIFT = "gift";
     public static final String KEY_ANSWER = "answer";
 
-    private FragmentInteractListener mListener;
     private MemoryGift mGift;
     private String mAnswer;
 
@@ -93,10 +91,6 @@ public class ActivateAccountFragment extends Fragment {
             }
         });
         return rootView;
-    }
-
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
     }
 
     private void tryActivateAccount() {
@@ -158,9 +152,7 @@ public class ActivateAccountFragment extends Fragment {
             mWaiting = false;
             return;
         }
-        if (mListener != null) {
-            mListener.onLoading(true);
-        }
+        notifyLoading(true);
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.activateUser(mGift.receiverId, mGift.gid, password2, email, mAnswer),
                 new XJsonObjectHandler(),
@@ -169,18 +161,14 @@ public class ActivateAccountFragment extends Fragment {
                     public void onNetworkError() {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
@@ -198,14 +186,12 @@ public class ActivateAccountFragment extends Fragment {
                         }
                         if (XStringUtil.isEmpty(token) || user == null) {
                             // 如果返回的json结果中没有token或user，则代表激活成功但自动登录失败，需要再手动登录
-                            mListener.onFinish(true, null);
+                            notifyFinish(true, null);
                         } else {
                             // 激活并自动登录成功
                             GlobalSource source = (GlobalSource) XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_GLOBAL);
                             source.loginSuccess(user, token);
-                            if (mListener != null) {
-                                mListener.onFinish(true, user);
-                            }
+                            notifyFinish(true, user);
                         }
                     }
                 });

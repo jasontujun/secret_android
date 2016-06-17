@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -29,11 +28,10 @@ import me.buryinmind.android.app.util.ApiUtil;
 /**
  * Created by jasontujun on 2016/4/20.
  */
-public class AnswerAccountFragment extends Fragment {
+public class AnswerAccountFragment extends XFragment {
 
     public static final String KEY_GIFT = "gift";
 
-    private FragmentInteractListener mListener;
     private MemoryGift mGift;
 
     private TextView mQuestionView;
@@ -96,10 +94,6 @@ public class AnswerAccountFragment extends Fragment {
         return rootView;
     }
 
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
-    }
-
     private void tryAnswerAccount() {
         if (mWaiting)
             return;
@@ -121,9 +115,7 @@ public class AnswerAccountFragment extends Fragment {
             mWaiting = false;
             return;
         }
-        if (mListener != null) {
-            mListener.onLoading(true);
-        }
+        notifyLoading(true);
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.answerActivateQuestion(mGift.receiverId, mGift.gid, answer),
                 new XAsyncHttp.Listener() {
@@ -131,26 +123,20 @@ public class AnswerAccountFragment extends Fragment {
                     public void onNetworkError() {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        if (mListener != null) {
-                            mListener.onFinish(false, null);
-                        }
+                        notifyFinish(false, null);
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, Object obj) {
                         mWaiting = false;
-                        if (mListener != null) {
-                            mListener.onFinish(true, answer);
-                        }
+                        notifyFinish(true, answer);
                     }
                 });
     }

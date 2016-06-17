@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -39,14 +38,13 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * Created by jasontujun on 2016/6/7.
  */
-public class PostMemoryFragment extends Fragment {
+public class PostMemoryFragment extends XFragment {
 
     public static final String TAG = PostMemoryFragment.class.getSimpleName();
 
     public static final String KEY_RECEIVER = "receiver";
     public static final String KEY_MID = "mid";
 
-    private FragmentInteractListener mListener;
     private User mReceiver;
     private Memory mMemory;
     private String mQuestion;
@@ -54,10 +52,10 @@ public class PostMemoryFragment extends Fragment {
 
     private View mProgressView;
     private SwipeLayout mSwipeLayout;
+    private TextView mLockPromptView;
     private EditText mQuestionInputView;
     private EditText mAnswerInputView;
     private ImageButton mLockBtn;
-    private Button mPostBtn;
 
     private boolean mWaiting;
     private boolean mQuestionShow;
@@ -83,10 +81,10 @@ public class PostMemoryFragment extends Fragment {
         XLog.d(TAG, "onCreateView()");
         View rootView = inflater.inflate(R.layout.fragment_post_memory, container, false);
         mProgressView = rootView.findViewById(R.id.loading_progress);
+        mLockPromptView = (TextView) rootView.findViewById(R.id.lock_prompt_txt);
         mQuestionInputView = (EditText) rootView.findViewById(R.id.question_input);
         mAnswerInputView = (EditText) rootView.findViewById(R.id.answer_input);
         mLockBtn = (ImageButton) rootView.findViewById(R.id.lock_btn);
-        mPostBtn = (Button) rootView.findViewById(R.id.post_btn);
         ImageView accountHeadView = (ImageView) rootView.findViewById(R.id.account_head_img);
         TextView accountNameView = (TextView) rootView.findViewById(R.id.account_name_txt);
         TextView accountDesView = (TextView) rootView.findViewById(R.id.account_des_txt);
@@ -105,6 +103,11 @@ public class PostMemoryFragment extends Fragment {
                     .into(accountHeadView);
         }
         // 设置问答输入框的监听
+        if (XStringUtil.isEmpty(mReceiver.uid)) {
+            mLockPromptView.setText(R.string.info_post_lock_required);
+        } else {
+            mLockPromptView.setText(R.string.info_post_lock);
+        }
         mQuestionInputView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -147,6 +150,7 @@ public class PostMemoryFragment extends Fragment {
                 XLog.d(TAG, "SwipeLayout onOpen()");
                 mQuestionShow = true;
             }
+
             @Override
             public void onClose(SwipeLayout layout) {
                 XLog.d(TAG, "SwipeLayout onClose()");
@@ -161,19 +165,6 @@ public class PostMemoryFragment extends Fragment {
                 mAnswer = mAnswerInputView.getText().toString().trim();
                 mSwipeLayout.toggle(true);
                 lockerTip();
-            }
-        });
-        mPostBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mQuestion = mQuestionInputView.getText().toString().trim();
-                mAnswer = mAnswerInputView.getText().toString().trim();
-                if (XStringUtil.isEmpty(mReceiver.uid) &&
-                        (XStringUtil.isEmpty(mQuestion) || XStringUtil.isEmpty(mAnswer))) {
-                    Toast.makeText(getActivity(), R.string.error_invalid_name, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                postMemory();
             }
         });
         // 如果是新增用户,提示加锁
@@ -199,38 +190,16 @@ public class PostMemoryFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onResume() {
-        XLog.d(TAG, "onResume()");
-        super.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        XLog.d(TAG, "onResume()");
-        super.onPause();
-    }
-
-    @Override
-    public void onStop() {
-        XLog.d(TAG, "onStop()");
-        super.onStop();
-    }
-
-    @Override
-    public void onDestroyView() {
-        XLog.d(TAG, "onDestroyView()");
-        super.onDestroyView();
-    }
-
-    @Override
-    public void onDestroy() {
-        XLog.d(TAG, "onDestroy()");
-        super.onDestroy();
-    }
-
-    public void setListener(FragmentInteractListener listener) {
-        mListener = listener;
+    public void confirm() {
+        mQuestion = mQuestionInputView.getText().toString().trim();
+        mAnswer = mAnswerInputView.getText().toString().trim();
+        if (XStringUtil.isEmpty(mReceiver.uid) &&
+                (XStringUtil.isEmpty(mQuestion) || XStringUtil.isEmpty(mAnswer))) {
+            Toast.makeText(getActivity(), R.string.error_empty_qna, Toast.LENGTH_SHORT).show();
+            ViewUtil.animationShake(mLockBtn);
+            return;
+        }
+        postMemory();
     }
 
     private void showProgress(boolean show) {
@@ -284,9 +253,7 @@ public class PostMemoryFragment extends Fragment {
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
-                        if (mListener != null) {
-                            mListener.onFinish(true, gid);
-                        }
+                        notifyFinish(true, gid);
                     }
                 });
     }

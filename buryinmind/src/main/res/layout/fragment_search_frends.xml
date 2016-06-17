@@ -22,16 +22,29 @@
             android:maxLines="1"
             android:singleLine="true" />
     </android.support.design.widget.TextInputLayout>
-
-    <!-- Description List -->
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/receiver_des_list"
+    <LinearLayout
+        android:id="@+id/receiver_des_list_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        app:layoutManager="LinearLayoutManager"
-        tools:listitem="@layout/item_description">
-    </android.support.v7.widget.RecyclerView>
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:padding="6dp"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray"
+            android:text="@string/info_search_description"/>
+        <!-- Description List -->
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/receiver_des_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            app:layoutManager="LinearLayoutManager"
+            tools:listitem="@layout/item_description">
+        </android.support.v7.widget.RecyclerView>
+    </LinearLayout>
 
     <RelativeLayout
         android:layout_width="match_parent"

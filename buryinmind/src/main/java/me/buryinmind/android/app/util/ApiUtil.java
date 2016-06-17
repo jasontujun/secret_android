@@ -129,6 +129,15 @@ public abstract class ApiUtil {
                 .addStringParam("btime", String.valueOf(bornTime));
     }
 
+    public static XHttpRequest updateDescription(List<String> des) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
+                .setMethod(XHttpRequest.Method.POST)
+                .setCharset("UTF-8")
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("des", JsonUtil.List2JsonString(des));
+    }
+
     public static XHttpRequest getHeadToken() {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/head/uptoken")
                 .setMethod(XHttpRequest.Method.POST)

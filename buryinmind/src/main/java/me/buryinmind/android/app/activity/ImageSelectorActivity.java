@@ -14,6 +14,7 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -62,6 +63,8 @@ public class ImageSelectorActivity extends AppCompatActivity {
     private ImageFolder mSelectedFolder;
     private List<String> mSelectedImages = new ArrayList<String>();
     private int mScreenHeight;
+
+    private AsyncTask mLoadLocalImageTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,6 +137,18 @@ public class ImageSelectorActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        if (mLoadLocalImageTask != null) {
+            if (mProgressDialog != null) {
+                mProgressDialog.dismiss();
+            }
+            mLoadLocalImageTask.cancel(true);
+        } else {
+            supportFinishAfterTransition();
+        }
+    }
+
     private void selectImageFolder(ImageFolder folder) {
         if (mSelectedFolder == folder)
             return;
@@ -180,13 +195,22 @@ public class ImageSelectorActivity extends AppCompatActivity {
             Toast.makeText(this, "暂无外部存储", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (mLoadLocalImageTask != null) {
+            return;
+        }
+        XLog.e(TAG, "loadImages()!");
         mSelectedImages.clear();
         mImageFolders.clear();
         // 显示进度条
-        mProgressDialog = ProgressDialog.show(this, null, "正在加载...");
-        new AsyncTask<Void, Void, Void>() {
+        if (mProgressDialog == null) {
+            mProgressDialog = ProgressDialog.show(this, null, "正在加载...");
+        } else {
+            mProgressDialog.show();
+        }
+        mLoadLocalImageTask = new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
+                XLog.e(TAG, "start search!");
                 ContentResolver mContentResolver = ImageSelectorActivity.this
                         .getContentResolver();
                 // 只查询jpeg和png的图片
@@ -228,15 +252,20 @@ public class ImageSelectorActivity extends AppCompatActivity {
 
             @Override
             protected void onPostExecute(Void result) {
+                XLog.d(TAG, "本地图片数量:" + mImageFolders.get(0).getCount());
+                mLoadLocalImageTask = null;
                 mProgressDialog.dismiss();
                 if (mImageFolders.get(0).getCount() == 0) {
-                    Toast.makeText(getApplicationContext(), "没有任何本地图片",
-                            Toast.LENGTH_SHORT).show();
                     return;
                 }
                 selectImageFolder(mImageFolders.get(0));
                 // 初始化展示文件夹的popupWindw
                 initPopupWindw();
+            }
+
+            @Override
+            protected void onCancelled(Void result) {
+                XLog.e(TAG, "onCancelled!");
             }
         }.execute();
     }
