@@ -188,7 +188,7 @@ public class TimelineFragment extends XFragment {
                     }).show(((AppCompatActivity) getActivity()).getSupportFragmentManager(), AddMemoryDialog.TAG);
                 }
                 // TODO 跳转到AddMemoryFragment
-                notifyRefresh(REFRESH_SET_BIRTHDAY, null);
+//                notifyRefresh(REFRESH_SET_BIRTHDAY, null);
             }
         });
 

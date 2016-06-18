@@ -61,8 +61,8 @@ public class SearchFriendsFragment extends XFragment {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        XLog.d(TAG, "onCreate().savedInstanceState=" + savedInstanceState);
         super.onCreate(savedInstanceState);
-
         mNewUser = new User();
         mFriendSource = (XListFilteredIdSourceImpl<User>) XDefaultDataRepo
                 .getInstance().getSource(MyApplication.SOURCE_FRIEND);
@@ -116,6 +116,7 @@ public class SearchFriendsFragment extends XFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        XLog.d(TAG, "onCreateView()");
         View rootView = inflater.inflate(R.layout.fragment_search_frends, container, false);
         mProgressView = rootView.findViewById(R.id.loading_progress);
         mNameInputView = (EditText) rootView.findViewById(R.id.receiver_name_input);

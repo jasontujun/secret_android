@@ -62,7 +62,7 @@ public class PostMemoryFragment extends XFragment {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        XLog.d(TAG, "onCreate()");
+        XLog.d(TAG, "onCreate().savedInstanceState=" + savedInstanceState);
         super.onCreate(savedInstanceState);
         Bundle argument = getArguments();
         if (argument != null) {

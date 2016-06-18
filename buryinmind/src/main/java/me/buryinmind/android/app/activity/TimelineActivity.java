@@ -11,7 +11,6 @@ import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -40,12 +39,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.data.GlobalSource;
-import me.buryinmind.android.app.fragment.AddMemoryFragment;
+import me.buryinmind.android.app.fragment.MemoryAddCoverFragment;
 import me.buryinmind.android.app.fragment.BirthdayFragment;
 import me.buryinmind.android.app.fragment.EditDescriptionFragment;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
@@ -66,7 +64,7 @@ public class TimelineActivity extends AppCompatActivity {
     private TimelineFragment mTimelineFragment;
     private BirthdayFragment mBirthDayFragment;
     private EditDescriptionFragment mEditDesFragment;
-    private AddMemoryFragment mAddFragment;
+    private MemoryAddCoverFragment mAddFragment;
 
     private View mProgressView;
     private View mContentView;
@@ -182,7 +180,7 @@ public class TimelineActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case android.R.id.home:
                 if (current != null && !(current instanceof TimelineFragment)) {
-                    onKeyDown(KeyEvent.KEYCODE_BACK, null);
+                    onBackPressed();
                     return true;
                 } else {
                     return super.onOptionsItemSelected(item);
@@ -198,7 +196,7 @@ public class TimelineActivity extends AppCompatActivity {
                         mBirthDayFragment.confirm();
                     } else if (current instanceof EditDescriptionFragment) {
                         mEditDesFragment.confirm();
-                    } else if (current instanceof AddMemoryFragment) {
+                    } else if (current instanceof MemoryAddCoverFragment) {
 
                     }
                 }
@@ -487,7 +485,7 @@ public class TimelineActivity extends AppCompatActivity {
                         goToNext(TimelineFragment.class);
                     } else {
                         // 模拟返回按钮
-                        onKeyDown(KeyEvent.KEYCODE_BACK, null);
+                        onBackPressed();
                     }
                 }
             });
@@ -532,7 +530,7 @@ public class TimelineActivity extends AppCompatActivity {
                                     mAccountDesView.setText(XStringUtil.list2String(user.descriptions, ", "));
                                 }
                                 // 模拟返回按钮
-                                onKeyDown(KeyEvent.KEYCODE_BACK, null);
+                                onBackPressed();
                             }
                         });
             }
@@ -542,9 +540,9 @@ public class TimelineActivity extends AppCompatActivity {
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                     .commit();
         } else if (current instanceof TimelineFragment &&
-                clazz == AddMemoryFragment.class) {
+                clazz == MemoryAddCoverFragment.class) {
             if (mAddFragment == null) {
-                mAddFragment = new AddMemoryFragment();
+                mAddFragment = new MemoryAddCoverFragment();
                 mEditDesFragment.setListener(
                         new XBaseFragmentListener() {
                             @Override
