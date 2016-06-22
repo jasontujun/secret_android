@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.model.Secret;
 
 /**
@@ -39,7 +40,7 @@ public class SecretImageUploader {
         mHttpClient = httpClient;
         mQiniuUploadMgr = qiniuUploadMgr;
         mListener = new HashMap<Secret, ProgressListener<Secret>>();
-        mUploadDir = context.getCacheDir();
+        mUploadDir = MyApplication.getCacheDirectory();;
         mTaskMgr = new XSerialMgrImpl<SecretUploadBean>();
         mTaskMgr.registerListener(new InnerListener(
                 new Handler(Looper.getMainLooper(),

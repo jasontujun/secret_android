@@ -3,7 +3,6 @@ package me.buryinmind.android.app.fragment;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.view.ViewCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -11,8 +10,6 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -47,9 +44,7 @@ import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.activity.MemoryDetailActivity;
 import me.buryinmind.android.app.adapter.XViewHolder;
-import me.buryinmind.android.app.controller.ResultListener;
 import me.buryinmind.android.app.data.GlobalSource;
-import me.buryinmind.android.app.dialog.AddMemoryDialog;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
 import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.model.Memory;
@@ -73,11 +68,9 @@ public class TimelineFragment extends XFragment {
     private XListIdDataSourceImpl<Memory> mMemorySource;
     private RecyclerView mTimelineView;
     private TimelineAdapter mAdapter;
-    private View mAddBtn;
 
     private boolean mWaiting;
     private boolean mListTop = true;
-    private boolean mAddingMemory;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -130,7 +123,6 @@ public class TimelineFragment extends XFragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_timeline, container, false);
         mTimelineView = (RecyclerView) rootView.findViewById(R.id.timeline_list);
-        mAddBtn = rootView.findViewById(R.id.timeline_add_btn);
 
         mTimelineView.setLayoutManager(new XLinearLayoutManager(getActivity(),
                 LinearLayoutManager.VERTICAL, false));
@@ -159,38 +151,6 @@ public class TimelineFragment extends XFragment {
             }
         });
         mTimelineView.setAdapter(mAdapter);
-
-        // init add btn
-        mAddBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!mAddingMemory) {
-                    mAddingMemory = true;
-                    Animation animation = AnimationUtils.loadAnimation(getActivity(), R.anim.rotate_start);
-                    animation.setFillAfter(true);
-                    mAddBtn.startAnimation(animation);
-                    AddMemoryDialog.newInstance(new DialogListener() {
-                        @Override
-                        public void onDone(Object... result) {
-                            String name = (String) result[0];
-                            Calendar date = (Calendar) result[1];
-                            // 统一改成GMT时区,再上传服务器
-                            addMemory(name, TimeUtil.changeTimeZoneToUTC(date.getTimeInMillis()));
-                        }
-
-                        @Override
-                        public void onDismiss() {
-                            mAddingMemory = false;
-                            Animation animation = AnimationUtils.loadAnimation(getActivity(), R.anim.rotate_back);
-                            animation.setFillAfter(true);
-                            mAddBtn.startAnimation(animation);
-                        }
-                    }).show(((AppCompatActivity) getActivity()).getSupportFragmentManager(), AddMemoryDialog.TAG);
-                }
-                // TODO 跳转到AddMemoryFragment
-//                notifyRefresh(REFRESH_SET_BIRTHDAY, null);
-            }
-        });
 
         return rootView;
     }
@@ -231,39 +191,6 @@ public class TimelineFragment extends XFragment {
                         getMemoryGift();
                     }
                 });
-    }
-
-    private void addMemory(String memoryName, long happenTime) {
-        if (mWaiting)
-            return;
-        mWaiting = true;
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.addMemory(memoryName, happenTime),
-                new XJsonObjectHandler(),
-                new XAsyncHttp.Listener<JSONObject>() {
-                    @Override
-                    public void onNetworkError() {
-                        mWaiting = false;
-                        Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        mWaiting = false;
-                        Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
-                        mWaiting = false;
-                        Memory memory = Memory.fromJson(jsonObject);
-                        if (memory != null) {
-                            mMemorySource.add(memory);
-                            mMemorySource.sort(Memory.comparator);
-                        }
-                    }
-                }
-        );
     }
 
     private void deleteMemory(final Memory memory) {
@@ -402,8 +329,30 @@ public class TimelineFragment extends XFragment {
                 });
     }
 
+    public boolean isScrollToTop() {
+        return mListTop;
+    }
+
+    public void needScrollTo(final int pos) {
+        if (!mListTop) {
+            mTimelineView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mTimelineView.smoothScrollToPosition(pos);
+                }
+            }, 50);
+        }
+    }
+
     public void needScrollToTop() {
-        mTimelineView.smoothScrollToPosition(0);
+        if (!mListTop) {
+            mTimelineView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mTimelineView.smoothScrollToPosition(0);
+                }
+            }, 50);
+        }
     }
 
 
@@ -543,7 +492,8 @@ public class TimelineFragment extends XFragment {
                         new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                mAddBtn.performClick();
+                                // 跳转到AddMemoryFragment
+                                notifyRefresh(REFRESH_ADD_MEMORY, null);
                             }
                         });
             } else {
@@ -604,7 +554,7 @@ public class TimelineFragment extends XFragment {
                                     .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
                             ConfirmDialog.newInstance(
                                     String.format(getResources().getString(R.string.info_delete_memory),
-                                            TimeUtil.calculateAge(user.bornTime, item.happenTime),
+                                            TimeUtil.calculateAge(user.bornTime, item.happenStartTime),
                                             item.name),
                                     new DialogListener() {
                                         boolean confirm = false;
@@ -636,7 +586,7 @@ public class TimelineFragment extends XFragment {
                     // 设置memory信息
                     holder.getView(R.id.timeline_node_txt, TextView.class).setText(item.name);
                     holder.getView(R.id.timeline_node_date, TextView.class).setText(
-                            XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenTime), "."));
+                            XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenStartTime), "."));
                     ImageView memoryImage = (ImageView) holder.getView(R.id.timeline_node_img);
                     if (!XStringUtil.isEmpty(item.coverUrl)) {
                         memoryImage.setVisibility(View.VISIBLE);

@@ -30,8 +30,8 @@ public class XParticleLayout extends FrameLayout {
     private static final int COUNT_OF_PARTICLE_BITMAP = 300;
     private static final int TIME_TO_LIVE = 1000;
     private static final int TIME_TO_FADE_OUT = 200;
-    public static final float DEFAULT_START_RATIO = 0.2f;
-    public static final float DEFAULT_END_RATIO = 0.6f;
+    public static final float DEFAULT_START_RATIO = 0.1f;
+    public static final float DEFAULT_END_RATIO = 0.5f;
     public enum Orientation {
         FROM_LEFT,
         FROM_RIGHT,

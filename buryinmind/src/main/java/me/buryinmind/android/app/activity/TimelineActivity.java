@@ -4,8 +4,6 @@ import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
@@ -29,8 +27,8 @@ import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadOptions;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
-import com.tj.xengine.android.utils.XStorageUtil;
 import com.tj.xengine.core.data.XDefaultDataRepo;
+import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
@@ -42,12 +40,15 @@ import java.io.File;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.controller.ProgressListener;
+import me.buryinmind.android.app.controller.ResultListener;
 import me.buryinmind.android.app.data.GlobalSource;
-import me.buryinmind.android.app.fragment.MemoryAddCoverFragment;
+import me.buryinmind.android.app.fragment.MemoryAddFragment;
 import me.buryinmind.android.app.fragment.BirthdayFragment;
 import me.buryinmind.android.app.fragment.EditDescriptionFragment;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
 import me.buryinmind.android.app.fragment.TimelineFragment;
+import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.FileUtils;
@@ -59,12 +60,12 @@ public class TimelineActivity extends AppCompatActivity {
     private static final String TAG = TimelineActivity.class.getSimpleName();
 
     private static final int HEADER_REQUEST_CODE = 8090;
-    private static final long MAX_IMAGE_SIZE = 100 * 1024;// 图片大小上限100K
+    private static final int COVER_REQUEST_CODE = 8091;
 
     private TimelineFragment mTimelineFragment;
     private BirthdayFragment mBirthDayFragment;
     private EditDescriptionFragment mEditDesFragment;
-    private MemoryAddCoverFragment mAddFragment;
+    private MemoryAddFragment mAddFragment;
 
     private View mProgressView;
     private View mContentView;
@@ -77,11 +78,13 @@ public class TimelineActivity extends AppCompatActivity {
     private TextView mAccountDesView;
     private View mAccountLine;
 
+    private MenuItem mAddBtn;
     private MenuItem mLogoutBtn;
     private MenuItem mNextBtn;
     private MenuItem mDoneBtn;
 
     private boolean mCollapsed = false;
+    private boolean mWaiting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,6 +125,10 @@ public class TimelineActivity extends AppCompatActivity {
         mAccountHeadView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mWaiting) {
+                    Toast.makeText(TimelineActivity.this, R.string.error_loading, Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 // 选择图片，并上传
                 Intent target = FileUtils.createGetContentIntent();
                 Intent intent = Intent.createChooser(target, getString(R.string.info_choose_head));
@@ -149,8 +156,8 @@ public class TimelineActivity extends AppCompatActivity {
             @Override
             public void run() {
                 // init first ui
-                if (user.bornTime == 0) {
-                    // 先设置生日，再进入时间线
+                if (user.bornTime == null) {
+                    // 用户没设置过生日，先设置生日，再进入时间线
                     goToNext(BirthdayFragment.class);
                 } else {
                     // 进入时间线
@@ -165,9 +172,11 @@ public class TimelineActivity extends AppCompatActivity {
         XLog.d(TAG, "onCreateOptionsMenu()");
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_timeline, menu);
-        mLogoutBtn = menu.getItem(0);
-        mNextBtn = menu.getItem(1);
-        mDoneBtn = menu.getItem(2);
+        mAddBtn = menu.getItem(0);
+        mLogoutBtn = menu.getItem(1);
+        mNextBtn = menu.getItem(2);
+        mDoneBtn = menu.getItem(3);
+        mAddBtn.setVisible(false);
         mLogoutBtn.setVisible(false);
         mNextBtn.setVisible(false);
         mDoneBtn.setVisible(false);
@@ -185,6 +194,9 @@ public class TimelineActivity extends AppCompatActivity {
                 } else {
                     return super.onOptionsItemSelected(item);
                 }
+            case R.id.action_add:
+                goToNext(MemoryAddFragment.class);
+                return true;
             case R.id.action_logout:
                 logoutAccount();
                 return true;
@@ -196,8 +208,8 @@ public class TimelineActivity extends AppCompatActivity {
                         mBirthDayFragment.confirm();
                     } else if (current instanceof EditDescriptionFragment) {
                         mEditDesFragment.confirm();
-                    } else if (current instanceof MemoryAddCoverFragment) {
-
+                    } else if (current instanceof MemoryAddFragment) {
+                        mAddFragment.confirm();
                     }
                 }
                 return true;
@@ -238,58 +250,43 @@ public class TimelineActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
             case HEADER_REQUEST_CODE:
-                // If the file selection was successful
                 if (resultCode == RESULT_OK && data != null) {
-                    // Get the URI of the selected file
-                    final Uri uri = data.getData();
-                    try {
-                        // Get the file path from the URI
-                        final String path = FileUtils.getPath(this, uri);
-                        if (path == null) {
-                            Toast.makeText(this, getString(R.string.error_select_picture),
-                                    Toast.LENGTH_LONG).show();
-                            break;
-                        }
-                        File file = new File(path);
-                        long fileSize = file.length();
-                        if (fileSize > MAX_IMAGE_SIZE) {
-                            // 先进行压缩再上传
-                            XLog.d(TAG, "need compress! size=" + fileSize);
-                            new AsyncTask<Void, Void, String>() {
-                                @Override
-                                protected String doInBackground(Void... params) {
-                                    File dir = getCacheDir();
-                                    if (dir != null && dir.exists() &&
-                                            !XStorageUtil.isFull(dir.getAbsolutePath(), MAX_IMAGE_SIZE)) {
-                                        File tmpFile = new File(dir, "tmp_" + System.currentTimeMillis() + ".jpg");
-                                        if (ImageUtil.compress(TimelineActivity.this, path, tmpFile.getAbsolutePath(), MAX_IMAGE_SIZE)) {
-                                            XLog.d(TAG, "head picture compress success!");
-                                            return tmpFile.getAbsolutePath();
-                                        } else {
-                                            XLog.d(TAG, "head picture compress failed!");
-                                            return null;
-                                        }
-                                    }
-                                    return null;
-                                }
-                                @Override
-                                protected void onPostExecute(String result) {
-                                    if (!XStringUtil.isEmpty(result)) {
-                                        uploadHeadPicture(result, true);
-                                    } else {
-                                        Toast.makeText(TimelineActivity.this, getString(R.string.error_select_picture),
-                                                Toast.LENGTH_LONG).show();
-                                    }
-                                }
-                            }.execute();
-                        } else {
-                            // 大小没超过上限，直接上传
-                            XLog.d(TAG, "no need compress! size=" + fileSize);
-                            uploadHeadPicture(path, false);
-                        }
-                    } catch (Exception e) {
+                    // Get the Path of the selected file
+                    final String path = FileUtils.getPath(this, data.getData());
+                    if (XStringUtil.isEmpty(path)) {
                         Toast.makeText(this, getString(R.string.error_select_picture),
-                                Toast.LENGTH_SHORT).show();
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    mWaiting = true;
+                    ImageUtil.compressAndUploadImage(this, ApiUtil.getHeadToken(),
+                            path,
+                            new ProgressListener<String>() {
+                                @Override
+                                public void onProgress(String path, long completeSize, long totalSize) {}
+
+                                @Override
+                                public void onResult(boolean result, String key) {
+                                    if (result) {
+                                        MyApplication.updateImageTimestamp();// 更新图片时间戳
+                                        showProfilePicture(path);
+                                    } else {
+                                        Toast.makeText(TimelineActivity.this, R.string.error_upload_picture,
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                    mWaiting = false;
+                                }
+                            }
+                    );
+                }
+                break;
+            case COVER_REQUEST_CODE:
+                if (resultCode == RESULT_OK && data != null) {
+                    Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+                    if (current instanceof MemoryAddFragment) {
+                        // Get the Path of the selected file
+                        String path = FileUtils.getPath(this, data.getData());
+                        mAddFragment.setCoverPath(path);
                     }
                 }
                 break;
@@ -305,12 +302,14 @@ public class TimelineActivity extends AppCompatActivity {
         if (current instanceof TimelineFragment) {
             mToolBar.setNavigationIcon(R.drawable.logo_buryinmind_white_small);
             mToolBar.setTitle(R.string.app_name);
+            mAddBtn.setVisible(true);
             mLogoutBtn.setVisible(true);
             mNextBtn.setVisible(false);
             mDoneBtn.setVisible(false);
         } else {
             mToolBar.setNavigationIcon(R.drawable.icon_arrow_back_white);
             mToolBar.setTitle(null);
+            mAddBtn.setVisible(false);
             mLogoutBtn.setVisible(false);
             mNextBtn.setVisible(false);
             mDoneBtn.setVisible(true);
@@ -336,60 +335,6 @@ public class TimelineActivity extends AppCompatActivity {
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .error(R.drawable.headicon_default)
                 .into(mAccountHeadView);
-    }
-
-    private void uploadHeadPicture(final String filePath, final boolean needDelete) {
-        // 从业务服务器获取上传凭证
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.getHeadToken(),
-                new XJsonObjectHandler(),
-                new XAsyncHttp.Listener<JSONObject>() {
-                    @Override
-                    public void onNetworkError() {
-                        Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jsonObject) {
-                        try {
-                            final String token = jsonObject.getString("up");
-                            final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
-                                    .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-                            // 真正开始上传
-                            MyApplication.getUploadManager().put(filePath, user.uid, token,
-                                    new UpCompletionHandler() {
-                                        @Override
-                                        public void complete(String key, ResponseInfo info, JSONObject response) {
-                                            XLog.d(TAG, "upload complete! " + info.toString());
-                                            if (info.isOK()) {
-                                                XLog.d(TAG, "upload success!");
-                                                MyApplication.updateImageTimestamp();// 更新图片时间戳
-                                                showProfilePicture(filePath);
-                                                if (needDelete) {
-                                                    new File(filePath).deleteOnExit();
-                                                }
-                                            } else {
-                                                Toast.makeText(TimelineActivity.this, R.string.error_upload_picture,
-                                                        Toast.LENGTH_SHORT).show();
-                                            }
-                                        }
-                                    },
-                                    new UploadOptions(null, null, false,
-                                            new UpProgressHandler() {
-                                                public void progress(String key, double percent) {
-                                                    XLog.d(TAG, "progress. " + key + ": " + percent);
-                                                }
-                                            }, null));
-                        } catch (JSONException e) {
-                            Toast.makeText(TimelineActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
     }
 
     private void logoutAccount() {
@@ -433,8 +378,10 @@ public class TimelineActivity extends AppCompatActivity {
                         refreshToolBar();
                         ViewUtil.animateExpand(mAccountLine, true);
                         ViewUtil.animateFadeInOut(mAccountDesView, false);
-                        mAppBar.setExpanded(true, true);
-                        mTimelineFragment.needScrollToTop();
+                        if (mTimelineFragment.isScrollToTop()) {
+                            mAppBar.setExpanded(true, true);
+                        }
+//                        mTimelineFragment.needScrollToTop();
                     }
 
                     @Override
@@ -446,10 +393,16 @@ public class TimelineActivity extends AppCompatActivity {
                     public void onRefresh(int refreshEvent, Object data) {
                         switch (refreshEvent) {
                             case TimelineFragment.REFRESH_EXPAND:
-                                mAppBar.setExpanded(true, true);
+                                if (getFragmentManager().findFragmentById(R.id.content_layout)
+                                        instanceof TimelineFragment) {
+                                    mAppBar.setExpanded(true, true);
+                                }
                                 break;
                             case TimelineFragment.REFRESH_SET_BIRTHDAY:
                                 goToNext(BirthdayFragment.class);
+                                break;
+                            case TimelineFragment.REFRESH_ADD_MEMORY:
+                                goToNext(MemoryAddFragment.class);
                                 break;
                         }
                     }
@@ -540,21 +493,55 @@ public class TimelineActivity extends AppCompatActivity {
                     .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                     .commit();
         } else if (current instanceof TimelineFragment &&
-                clazz == MemoryAddCoverFragment.class) {
-            if (mAddFragment == null) {
-                mAddFragment = new MemoryAddCoverFragment();
-                mEditDesFragment.setListener(
-                        new XBaseFragmentListener() {
-                            @Override
-                            public void onEnter() {
-                                refreshToolBar();
-                                if (!mCollapsed) {
-                                    mAppBar.setExpanded(false, true);
-                                }
-                                ViewUtil.animateExpand(mAccountLine, false);
+                clazz == MemoryAddFragment.class) {
+            // 每次都新建一个MemoryAddFragment
+            mAddFragment = new MemoryAddFragment();
+            mAddFragment.setListener(
+                    new XBaseFragmentListener() {
+                        @Override
+                        public void onEnter() {
+                            refreshToolBar();
+                            if (!mCollapsed) {
+                                mAppBar.setExpanded(false, true);
                             }
-                        });
-            }
+                            ViewUtil.animateExpand(mAccountLine, false);
+                        }
+
+                        @Override
+                        public void onLoading(boolean show) {
+                            showProgress(show);
+                        }
+
+                        @Override
+                        public void onRefresh(int refreshEvent, Object data) {
+                            switch (refreshEvent) {
+                                case MemoryAddFragment.REFRESH_SET_COVER:
+                                    Intent target = FileUtils.createGetContentIntent();
+                                    Intent intent = Intent.createChooser(target, getString(R.string.info_choose_memory_cover));
+                                    try {
+                                        startActivityForResult(intent, TimelineActivity.COVER_REQUEST_CODE);
+                                    } catch (ActivityNotFoundException ex) {
+                                        Toast.makeText(TimelineActivity.this, getString(R.string.error_select_picture),
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                    break;
+                            }
+                        }
+
+                        @Override
+                        public void onFinish ( boolean result, Object data){
+                            showProgress(false);
+                            if (result && data != null) {
+                                Memory memory = (Memory) data;
+                                XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                                        XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+                                source.add(memory);
+                                source.sort(Memory.comparator);
+                            }
+                            // 模拟返回按钮
+                            onBackPressed();
+                        }
+                    });
             getFragmentManager().beginTransaction()
                     .replace(R.id.content_layout, mAddFragment)
                     .addToBackStack(null)

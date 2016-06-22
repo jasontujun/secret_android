@@ -15,6 +15,8 @@ import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttp;
 import com.tj.xengine.core.network.http.XHttpConfig;
 
+import java.io.File;
+
 import me.buryinmind.android.app.controller.SecretImageDownloader;
 import me.buryinmind.android.app.controller.SecretImageUploader;
 import me.buryinmind.android.app.data.GlobalSource;
@@ -36,6 +38,9 @@ public class MyApplication extends Application {
     public static final String SOURCE_SECRET = "secret";
     public static final String SOURCE_FRIEND = "friend";
 
+    public static final long MAX_IMAGE_SIZE = 100 * 1024;// 图片大小上限100K
+
+    private static File mCacheDir;
     private static XAsyncHttp mAsyncHttp;
     private static XHttp mHttp;
     private static UploadManager mUploadManager;
@@ -48,6 +53,7 @@ public class MyApplication extends Application {
         super.onCreate();
         XLog.d(TAG, "onCreate()");
 
+        mCacheDir = getCacheDir();
         // 初始化Http模块
         mHttp = new XJavaHttpClient(XHttpConfig.builder()
                 .setUserAgent("BuryInMind_Android")
@@ -55,7 +61,7 @@ public class MyApplication extends Application {
         mAsyncHttp = new XAsyncHttpClient(mHttp);
         mUploadManager = new UploadManager();
         mSecretUploader = new SecretImageUploader(this, mHttp, mUploadManager);
-        mSecretDownloader = new SecretImageDownloader(mHttp, getCacheDir().getAbsolutePath());
+        mSecretDownloader = new SecretImageDownloader(mHttp, mCacheDir.getAbsolutePath());
 
         // 初始化数据库
         XDatabase.getInstance().init(getApplicationContext(), "buryinmind", 1);
@@ -69,6 +75,10 @@ public class MyApplication extends Application {
         secretSource.setReplaceOverride(true);
         secretSource.loadFromDatabase();
         repo.registerDataSource(secretSource);
+    }
+
+    public static File getCacheDirectory() {
+        return mCacheDir;
     }
 
     public static XHttp getHttp() {

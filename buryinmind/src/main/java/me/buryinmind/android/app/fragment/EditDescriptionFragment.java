@@ -1,6 +1,5 @@
 package me.buryinmind.android.app.fragment;
 
-import android.app.Fragment;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -80,10 +79,10 @@ public class EditDescriptionFragment extends XFragment {
             return;
         }
         // 上传服务器
-        updateBornTime(mDescriptionAdapter.getData());
+        updateDescription(mDescriptionAdapter.getData());
     }
 
-    private void updateBornTime(final List<String> descriptions) {
+    private void updateDescription(final List<String> descriptions) {
         if (mWaiting)
             return;
         mWaiting = true;

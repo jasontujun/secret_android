@@ -179,6 +179,36 @@ public class SearchFriendsFragment extends XFragment {
         return rootView;
     }
 
+    @Override
+    public void onViewStateRestored(Bundle savedInstanceState) {
+        XLog.d(TAG, "onViewStateRestored()");
+        super.onViewStateRestored(savedInstanceState);
+    }
+
+    @Override
+    public void onStart() {
+        XLog.d(TAG, "onStart()");
+        super.onStart();
+    }
+
+    @Override
+    public void onStop() {
+        XLog.d(TAG, "onStop()");
+        super.onStop();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        XLog.d(TAG, "onSaveInstanceState()");
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onDestroyView() {
+        XLog.d(TAG, "onDestroyView()");
+        super.onDestroyView();
+    }
+
     private void showProgress(boolean show) {
         ViewUtil.animateFadeInOut(mFriendList, show);
         ViewUtil.animateFadeInOut(mProgressView, !show);

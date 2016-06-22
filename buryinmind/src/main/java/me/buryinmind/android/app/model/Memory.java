@@ -25,9 +25,9 @@ public class Memory {
     public static final Comparator<Memory> comparator = new Comparator<Memory>() {
         @Override
         public int compare(Memory lhs, Memory rhs) {
-            if (lhs.happenTime < rhs.happenTime){
+            if (lhs.happenStartTime < rhs.happenStartTime){
                 return -1;
-            } else if (lhs.happenTime > rhs.happenTime){
+            } else if (lhs.happenStartTime > rhs.happenStartTime){
                 return 1;
             } else {
                 if (lhs.createTime < rhs.createTime)
@@ -53,7 +53,9 @@ public class Memory {
 
     public String ownerName;
 
-    public long happenTime;
+    public long happenStartTime;
+
+    public long happenEndTime;
 
     public long createTime;
 
@@ -64,6 +66,8 @@ public class Memory {
     public int coverWidth;
 
     public int coverHeight;
+
+    public String heritage;
 
 
     // 本地属性，非服务器端属性
@@ -82,7 +86,7 @@ public class Memory {
     }
 
     public void calculateAge(long userBornTime) {
-        this.age = TimeUtil.calculateAge(userBornTime, this.happenTime);
+        this.age = TimeUtil.calculateAge(userBornTime, this.happenStartTime);
     }
 
     public static Memory fromJson(JSONObject jo) {
@@ -96,9 +100,11 @@ public class Memory {
             memory.authorName = jo.getString("author_name");
             memory.ownerId = jo.getString("owner_id");
             memory.ownerName = jo.getString("owner_name");
-            memory.happenTime = jo.getLong("happen_time");
+            memory.happenStartTime = jo.getLong("happen_start_time");
+            memory.happenEndTime = jo.getLong("happen_end_time");
             memory.createTime = jo.getLong("create_time");
             memory.editable = jo.getInt("editable") != 0;
+            memory.heritage = jo.getString("heritage");
             if (jo.has("cover_url") && !jo.isNull("cover_url")) {
                 memory.coverUrl = jo.getString("cover_url");
             }
@@ -182,8 +188,12 @@ public class Memory {
             memory.authorId = gift.senderId;
             memory.authorName = gift.senderName;
             memory.name = jo.getString("memory_name");
-            if (jo.has("happen_time") && !jo.isNull("happen_time")) {
-                memory.happenTime =jo.getLong("happen_time");
+            if (jo.has("happen_start_time") && !jo.isNull("happen_start_time")) {
+                memory.happenStartTime =jo.getLong("happen_start_time");
+                memory.calculateAge();
+            }
+            if (jo.has("happen_end_time") && !jo.isNull("happen_end_time")) {
+                memory.happenEndTime =jo.getLong("happen_end_time");
                 memory.calculateAge();
             }
             if (jo.has("cover_url") && !jo.isNull("cover_url")) {

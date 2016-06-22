@@ -9,7 +9,7 @@
     <string name="prompt_email">Email</string>
     <string name="prompt_question">Question</string>
     <string name="prompt_answer">Answer</string>
-    <string name="prompt_memory_name">Name the memory</string>
+    <string name="prompt_memory_name">Memory bury a lot of heart&#8230;</string>
     <string name="prompt_memory_receiver">Post To</string>
     <string name="prompt_add_description">Add Description</string>
 
@@ -34,12 +34,14 @@
     <string name="error_exception">exception!</string>
     <string name="error_field_required">Required</string>
     <string name="error_api_return_failed">request failed!</string>
+    <string name="error_loading">Loading, please wait!</string>
     <string name="error_invalid_email">Email format incorrect!</string>
     <string name="error_invalid_name">Name is too Short</string>
     <string name="error_invalid_password">This password is too short, at least 6</string>
     <string name="error_inconsistent_password">The two passwords are inconsistent</string>
     <string name="error_login_fail">Sorry, Password is not correct!</string>
     <string name="error_invalid_date">Selected date is incorrect!</string>
+    <string name="error_empty_date">Don\'t forget about the time!</string>
     <string name="error_select_picture">Sorry, Cannot select picture!</string>
     <string name="error_upload_picture">Sorry, upload picture failed!</string>
     <string name="error_duplicate_des">Description exist!</string>
@@ -65,6 +67,7 @@
     <string name="info_timeline_footer">To be continued &#8230;</string>
     <string name="info_add_memory">Add a new memory</string>
     <string name="info_add_memory_date">When I was %1$d</string>
+    <string name="info_add_memory_no_cover">Sure to create this memory without a cover image?\n(Default color will be the cover)</string>
     <string name="info_delete_memory">Sure to delete the memory \"%2$s\" when you were %1$d?</string>
     <string name="info_delete_secret">Sure to delete this image?</string>
     <string name="info_choose_head">Please select a picture as your head</string>

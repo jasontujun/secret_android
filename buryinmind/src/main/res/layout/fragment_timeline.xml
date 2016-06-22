@@ -12,13 +12,4 @@
         android:layout_height="wrap_content"
         app:layoutManager="LinearLayoutManager"
         tools:listitem="@layout/item_timeline_node"/>
-
-    <ImageView
-        android:id="@+id/timeline_add_btn"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_margin="20dp"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:src="@drawable/icon_add_circle_black"/>
 </RelativeLayout>

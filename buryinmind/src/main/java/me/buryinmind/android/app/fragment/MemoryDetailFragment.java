@@ -264,7 +264,14 @@ public class MemoryDetailFragment extends XFragment {
     }
 
     public void needScrollToTop() {
-        mSecretListView.smoothScrollToPosition(0);
+        if (!mListTop) {
+            mSecretListView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mSecretListView.smoothScrollToPosition(0);
+                }
+            }, 50);
+        }
     }
 
     private void showProgress(final boolean show) {

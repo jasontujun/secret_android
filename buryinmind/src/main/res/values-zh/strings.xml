@@ -9,7 +9,7 @@
     <string name="prompt_email">邮箱</string>
     <string name="prompt_question">问题</string>
     <string name="prompt_answer">答案</string>
-    <string name="prompt_memory_name">以回忆之名</string>
+    <string name="prompt_memory_name">回忆，藏着很多心里话&#8230;</string>
     <string name="prompt_memory_receiver">寄送给</string>
     <string name="prompt_add_description">添加描述</string>
 
@@ -34,12 +34,14 @@
     <string name="error_exception">出现异常!</string>
     <string name="error_field_required">必填哦</string>
     <string name="error_api_return_failed">请求失败!</string>
+    <string name="error_loading">正在加载，请稍后!</string>
     <string name="error_invalid_email">邮箱格式不正确!</string>
     <string name="error_invalid_name">名字太短了</string>
     <string name="error_invalid_password">密码长度不够，至少6位</string>
     <string name="error_inconsistent_password">两次输入密码不一致</string>
     <string name="error_login_fail">抱歉，密码不正确!</string>
     <string name="error_invalid_date">所选日期不正确!</string>
+    <string name="error_empty_date">不要忘了回忆的时间哦!</string>
     <string name="error_select_picture">抱歉，无法选择图片!</string>
     <string name="error_upload_picture">抱歉，图片上传失败!</string>
     <string name="error_duplicate_des">描述已存在!</string>
@@ -60,9 +62,11 @@
     <string name="info_timeline_footer">未完待续 &#8230;</string>
     <string name="info_add_memory">添加回忆</string>
     <string name="info_add_memory_date">%1$d岁那年</string>
+    <string name="info_add_memory_no_cover">确定不给回忆添加一张封面图片吗?\n(以默认颜色作为回忆封面)</string>
     <string name="info_delete_memory">确定抹去%1$d岁的这段回忆“%2$s”?</string>
     <string name="info_delete_secret">确定删除这张图片?</string>
     <string name="info_choose_head">请选择一张图片作为头像</string>
+    <string name="info_choose_memory_cover">请选择一张图片作为回忆的封面</string>
     <string name="info_choose_image">选择图片</string>
     <string name="info_choose_image_done">完成 (%1$d张)</string>
     <string name="info_all_image">所有图片</string>

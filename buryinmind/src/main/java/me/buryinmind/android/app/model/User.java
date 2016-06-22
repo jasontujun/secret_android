@@ -31,6 +31,10 @@ public class User implements Serializable {
         }
     };
 
+    public static final String HERITAGE_DEFAULT = "h_default";
+    public static final String HERITAGE_DESTROY = "h_destroy";
+    public static final String HERITAGE_PUBLIC = "h_public";
+
     @XId
     public String uid;
 
@@ -40,9 +44,11 @@ public class User implements Serializable {
 
     public int state;
 
-    public long bornTime;
+    public Long bornTime;// 如果用户没有设置生日，该值为null
 
     public long createTime;
+
+    public String heritage;
 
     // 本地属性.标识此用户是否是好友
     public boolean isFriend;
@@ -70,6 +76,9 @@ public class User implements Serializable {
             }
             if (jo.has("create_time") && !jo.isNull("create_time")) {
                 user.createTime = jo.getLong("create_time");
+            }
+            if (jo.has("heritage") && !jo.isNull("heritage")) {
+                user.heritage = jo.getString("heritage");
             }
             return user;
         } catch (JSONException e) {

@@ -8,10 +8,15 @@
         <!--android:title="@string/button_settings"-->
         <!--app:showAsAction="never" />-->
     <item
+        android:id="@+id/action_add"
+        android:icon="@drawable/icon_add_white"
+        android:title="@string/button_add_secret"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_logout"
         android:icon="@drawable/icon_logout_white"
         android:title="@string/button_logout"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
     <item
         android:id="@+id/action_next"
         android:icon="@drawable/icon_navigate_next_white"

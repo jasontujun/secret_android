@@ -27,9 +27,9 @@ public abstract class TimeUtil {
     }
 
     public static Calendar getCalendar(long timeInMillis) {
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        // 将毫秒时间戳(GMT时间)，解读为本地时区的时间
+        Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
         calendar.setTimeInMillis(timeInMillis);
-        calendar.setTimeZone(TimeZone.getDefault());// 从GMT时区转为本地时区
         return calendar;
     }
 

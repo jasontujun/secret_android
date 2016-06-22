@@ -47,9 +47,13 @@ public class BirthdayFragment extends XFragment {
                 .setSoundEffectsEnabled(false);
         User user = ((GlobalSource) XDefaultDataRepo.getInstance()
                 .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
-        if (user.bornTime != 0) {
+        if (user.bornTime != null) {
+            // 用户设置过生日
             Calendar birth = TimeUtil.getCalendar(user.bornTime);
             mDatePicker.setDate(birth.getTime());
+        } else {
+            // 用户没设置过生日，显示当前时间
+            mDatePicker.setDate(Calendar.getInstance().getTime());
         }
         return rootView;
     }

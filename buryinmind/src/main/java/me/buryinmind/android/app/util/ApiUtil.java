@@ -21,8 +21,8 @@ import me.buryinmind.android.app.model.User;
  * Created by jason on 2016/4/20.
  */
 public abstract class ApiUtil {
-    private static final String DOMAIN = "http://192.168.1.103:3000";
-    private static final String PUBLIC_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
+    private static final String DOMAIN = "http://192.168.1.107:3000";
+    public static final String PUBLIC_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
 
 
     private static String getLocalUserId() {
@@ -138,11 +138,64 @@ public abstract class ApiUtil {
                 .addStringParam("des", JsonUtil.List2JsonString(des));
     }
 
+    public static XHttpRequest updateUserHeritage(String heritage) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
+                .setMethod(XHttpRequest.Method.POST)
+                .setCharset("UTF-8")
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("heritage", heritage);
+    }
+
+    public static XHttpRequest updateMemoryInfo(String mid, String name,
+                                                String heritage,
+                                                long[] happenTime) {
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/memory/update")
+                .setMethod(XHttpRequest.Method.POST)
+                .setCharset("UTF-8")
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid);
+        if (!XStringUtil.isEmpty(name)) {
+            request.addStringParam("name", name);
+        }
+        if (!XStringUtil.isEmpty(heritage)) {
+            request.addStringParam("heritage", heritage);
+        }
+        if (happenTime != null &&
+                happenTime[0] <= happenTime[1]) {
+            request.addStringParam("hstart", String.valueOf(happenTime[0]));
+            request.addStringParam("hend", String.valueOf(happenTime[1]));
+        }
+        return request;
+    }
+
+    public static XHttpRequest updateMemoryCover(String mid, String coverUrl,
+                                                 int coverWidth, int coverHeight) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/update")
+                .setMethod(XHttpRequest.Method.POST)
+                .setCharset("UTF-8")
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid)
+                .addStringParam("curl", coverUrl)
+                .addStringParam("cw", String.valueOf(coverWidth))
+                .addStringParam("ch", String.valueOf(coverHeight));
+    }
+
     public static XHttpRequest getHeadToken() {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/head/uptoken")
                 .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", getLocalUserId())
                 .addStringParam("token", getLocalToken());
+    }
+
+    public static XHttpRequest getMemoryCoverToken(String mid) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/cover/uptoken")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("mid", mid);
     }
 
     public static XHttpRequest getMemoryList() {
@@ -152,14 +205,17 @@ public abstract class ApiUtil {
                 .addStringParam("token", getLocalToken());
     }
 
-    public static XHttpRequest addMemory(String name, long happenTime) {
+    public static XHttpRequest addMemory(String name,
+                                         long happenStartTime,
+                                         long happenEndTime) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/memory/add")
                 .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
                 .addStringParam("uid", getLocalUserId())
                 .addStringParam("token", getLocalToken())
                 .addStringParam("name", name)
-                .addStringParam("ha", String.valueOf(happenTime));
+                .addStringParam("hstart", String.valueOf(happenStartTime))
+                .addStringParam("hend", String.valueOf(happenEndTime));
     }
 
     public static XHttpRequest inMemory() {

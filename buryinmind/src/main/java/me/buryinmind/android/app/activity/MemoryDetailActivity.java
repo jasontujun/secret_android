@@ -2,13 +2,13 @@ package me.buryinmind.android.app.activity;
 
 import android.app.Fragment;
 import android.app.FragmentTransaction;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -16,6 +16,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
@@ -23,6 +24,8 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
+import com.tj.xengine.core.network.http.XAsyncHttp;
+import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
 import java.util.ArrayList;
@@ -30,8 +33,8 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.controller.ProgressListener;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
-import me.buryinmind.android.app.fragment.XFragmentListener;
 import me.buryinmind.android.app.fragment.MemoryDetailFragment;
 import me.buryinmind.android.app.fragment.PostMemoryFragment;
 import me.buryinmind.android.app.fragment.SearchFriendsFragment;
@@ -39,6 +42,8 @@ import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.Secret;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
+import me.buryinmind.android.app.util.FileUtils;
+import me.buryinmind.android.app.util.ImageUtil;
 import me.buryinmind.android.app.util.TimeUtil;
 import me.buryinmind.android.app.util.ViewUtil;
 
@@ -48,7 +53,8 @@ import me.buryinmind.android.app.util.ViewUtil;
 public class MemoryDetailActivity extends AppCompatActivity {
 
     private static final String TAG = MemoryDetailActivity.class.getSimpleName();
-    private static final int IMAGE_REQUEST_CODE = 9900;
+    private static final int SECRET_REQUEST_CODE = 9900;
+    private static final int COVER_REQUEST_CODE = 9901;
 
     private MemoryDetailFragment mSecretsFragment;
     private SearchFriendsFragment mFriendsFragment;
@@ -56,12 +62,19 @@ public class MemoryDetailActivity extends AppCompatActivity {
 
     private CollapsingToolbarLayout mCollapsedLayout;
     private AppBarLayout mAppBar;
+    private ImageView mMemoryCoverView;
+    private View mMemoryCoverMask;
+    private View mMemoryCoverLayout;
+    private TextView mMemoryTime;
+    private TextView mAuthorName;
+    private TextView mAuthorNameLabel;
     private Toolbar mToolBar;
     private MenuItem mAddBtn;
     private MenuItem mPostBtn;
     private MenuItem mDoneBtn;
 
     private boolean mCollapsed = false;
+    private boolean mWaiting = false;
     private Memory mMemory;
 
     @Override
@@ -85,11 +98,14 @@ public class MemoryDetailActivity extends AppCompatActivity {
         mCollapsedLayout = (CollapsingToolbarLayout) findViewById(R.id.toolbar_layout);
         mToolBar = (Toolbar) findViewById(R.id.toolbar);
         mAppBar = (AppBarLayout) findViewById(R.id.app_bar);
-        ImageView mMemoryProfileView = (ImageView) findViewById(R.id.memory_profile_bg);
-        TextView mMemoryTime = (TextView) findViewById(R.id.memory_time_view);
+        mMemoryCoverView = (ImageView) findViewById(R.id.memory_cover_image);
+        mMemoryCoverMask = findViewById(R.id.memory_cover_image_mask);
+        mMemoryCoverLayout = findViewById(R.id.memory_cover_layout);
+        mMemoryTime = (TextView) findViewById(R.id.memory_time_view);
         View mAuthorLayout = findViewById(R.id.memory_author_layout);
-        ImageView mAuthorHeader = (ImageView) findViewById(R.id.account_head_img);
-        TextView mAuthorName = (TextView) findViewById(R.id.account_name_txt);
+        ImageView mAuthorHeader = (ImageView) findViewById(R.id.memory_author_head_img);
+        mAuthorName = (TextView) findViewById(R.id.memory_author_name_txt);
+        mAuthorNameLabel = (TextView) findViewById(R.id.memory_author_name_label);
 
         // init toolbar
         mCollapsedLayout.setTitle(mMemory.name);
@@ -107,26 +123,66 @@ public class MemoryDetailActivity extends AppCompatActivity {
             }
         });
 
-        // init profile and author
-        if (!XStringUtil.isEmpty(mMemory.coverUrl)) {
-            Glide.with(MemoryDetailActivity.this)
+        // init cover
+        if (XStringUtil.isEmpty(mMemory.coverUrl)) {
+            mMemoryCoverMask.setVisibility(View.GONE);
+            mMemoryTime.setTextColor(getResources().getColor(R.color.white));
+            mAuthorName.setTextColor(getResources().getColor(R.color.white));
+            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.white));
+            mMemoryCoverView.setImageResource(R.color.darkGray);
+        } else {
+            mMemoryCoverMask.setVisibility(View.VISIBLE);
+            mMemoryTime.setTextColor(getResources().getColor(R.color.darkGray));
+            mAuthorName.setTextColor(getResources().getColor(R.color.gray));
+            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.gray));
+            Glide.with(this)
                     .load(mMemory.coverUrl)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .priority(Priority.HIGH)
                     .placeholder(R.color.darkGray)
                     .error(R.color.darkGray)
-                    .into(mMemoryProfileView);
-        } else {
-            mMemoryProfileView.setImageResource(R.color.darkGray);
+                    .into(mMemoryCoverView);
         }
-        mMemoryProfileView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // TODO 修改Memory封面
-            }
-        });
+        if (mMemory.editable) {
+            mMemoryCoverLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+                    if (!(current instanceof MemoryDetailFragment)) {
+                        return;
+                    }
+                    if (mWaiting) {
+                        Toast.makeText(MemoryDetailActivity.this, R.string.error_loading, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // 修改Memory封面
+                    Intent target = FileUtils.createGetContentIntent();
+                    Intent intent = Intent.createChooser(target, getString(R.string.info_choose_memory_cover));
+                    try {
+                        startActivityForResult(intent, COVER_REQUEST_CODE);
+                    } catch (ActivityNotFoundException ex) {
+                        Toast.makeText(MemoryDetailActivity.this, getString(R.string.error_select_picture),
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
+        }
+        // init author and info
         mMemoryTime.setText(String.format(getResources().getString(R.string.info_memory_time),
-                XStringUtil.calendar2str(TimeUtil.getCalendar(mMemory.happenTime), ".")));
+                XStringUtil.calendar2str(TimeUtil.getCalendar(mMemory.happenStartTime), ".")));
+        if (mMemory.editable) {
+            mMemoryTime.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+                    if (!(current instanceof MemoryDetailFragment)) {
+                        return;
+                    }
+                    // TODO 修改Memory发生的时间
+                    Toast.makeText(MemoryDetailActivity.this, "修改Memory发生的时间", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
         if (!mMemory.authorId.equals(mMemory.ownerId)) {
             mAuthorLayout.setVisibility(View.VISIBLE);
             Glide.with(MemoryDetailActivity.this)
@@ -176,7 +232,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
                 return true;
             case R.id.action_add:
                 Intent intent = new Intent(MemoryDetailActivity.this, ImageSelectorActivity.class);
-                startActivityForResult(intent, IMAGE_REQUEST_CODE);
+                startActivityForResult(intent, SECRET_REQUEST_CODE);
                 return true;
             case  R.id.action_post:
                 goToNext(SearchFriendsFragment.class, null);
@@ -192,7 +248,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-            case IMAGE_REQUEST_CODE:
+            case SECRET_REQUEST_CODE:
                 if (resultCode == RESULT_OK && data != null) {
                     List<String> selectedImages = (List<String>) data.getExtras().getSerializable("result");
                     if (selectedImages == null || selectedImages.size() == 0)
@@ -204,6 +260,75 @@ public class MemoryDetailActivity extends AppCompatActivity {
                         newSecrets.add(se);
                     }
                     mSecretsFragment.addSecret(newSecrets);
+                }
+                break;
+            case COVER_REQUEST_CODE:
+                if (resultCode == RESULT_OK && data != null) {
+                    final String path = FileUtils.getPath(this, data.getData());
+                    if (XStringUtil.isEmpty(path)) {
+                        Toast.makeText(this, getString(R.string.error_select_picture),
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    mWaiting = true;
+                    // 如果设置了封面图片，则压缩并上传图片
+                    ImageUtil.compressAndUploadImage(MemoryDetailActivity.this,
+                            ApiUtil.getMemoryCoverToken(mMemory.mid), path,
+                            new ProgressListener<String>() {
+                                @Override
+                                public void onProgress(String filePath,
+                                                       long completeSize, long totalSize) {
+                                    // TODO 显示上传进度？
+                                }
+
+                                @Override
+                                public void onResult(boolean result, final String key) {
+                                    if (result) {
+                                        // 上传成功，回调服务器
+                                        final String url = ApiUtil.PUBLIC_DOMAIN + "/" + key;
+                                        final int[] dimension = ImageUtil.getDimension(path);
+                                        MyApplication.getAsyncHttp().execute(
+                                                ApiUtil.updateMemoryCover(mMemory.mid,
+                                                        url, dimension[0], dimension[1]),
+                                                new XAsyncHttp.Listener() {
+                                                    @Override
+                                                    public void onNetworkError() {
+                                                        Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                                                        mWaiting = false;
+                                                    }
+
+                                                    @Override
+                                                    public void onFinishError(XHttpResponse xHttpResponse) {
+                                                        Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                                                        mWaiting = false;
+                                                    }
+
+                                                    @Override
+                                                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                                                        mMemory.coverUrl = url;
+                                                        mMemory.coverWidth = dimension[0];
+                                                        mMemory.coverHeight = dimension[1];
+                                                        mMemoryCoverMask.setVisibility(View.VISIBLE);
+                                                        mWaiting = false;
+                                                        // 刷新封面图片
+                                                        mMemoryCoverMask.setVisibility(View.VISIBLE);
+                                                        mMemoryTime.setTextColor(getResources().getColor(R.color.darkGray));
+                                                        mAuthorName.setTextColor(getResources().getColor(R.color.gray));
+                                                        mAuthorNameLabel.setTextColor(getResources().getColor(R.color.gray));
+                                                        Glide.with(MemoryDetailActivity.this)
+                                                                .load(path)
+                                                                .placeholder(R.color.darkGray)
+                                                                .error(R.color.darkGray)
+                                                                .into(mMemoryCoverView);
+                                                    }
+                                                });
+                                    } else {
+                                        // 上传失败
+                                        Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                                        mWaiting = false;
+                                    }
+                                }
+                            });
                 }
                 break;
         }

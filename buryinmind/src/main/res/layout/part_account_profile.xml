@@ -14,7 +14,7 @@
     <View
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:background="@drawable/bg_profile_cover"/>
+        android:background="@drawable/bg_profile_mask"/>
 
     <RelativeLayout
         android:id="@+id/account_line"
