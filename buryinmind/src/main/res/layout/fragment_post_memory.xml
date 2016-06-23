@@ -28,7 +28,7 @@
                 android:padding="6dp"
                 android:textSize="@dimen/text_size_small"
                 android:textColor="@color/darkGray"
-                tools:text="@string/info_post_lock"/>
+                tools:text="@string/info_post_lock_optional"/>
             <!-- Question -->
             <android.support.design.widget.TextInputLayout
                 android:layout_width="match_parent"

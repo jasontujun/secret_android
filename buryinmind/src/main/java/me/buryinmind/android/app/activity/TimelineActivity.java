@@ -21,11 +21,6 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.qiniu.android.http.ResponseInfo;
-import com.qiniu.android.storage.UpCompletionHandler;
-import com.qiniu.android.storage.UpProgressHandler;
-import com.qiniu.android.storage.UploadOptions;
-import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
@@ -33,19 +28,13 @@ import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.File;
-
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.controller.ProgressListener;
-import me.buryinmind.android.app.controller.ResultListener;
 import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.fragment.MemoryAddFragment;
 import me.buryinmind.android.app.fragment.BirthdayFragment;
-import me.buryinmind.android.app.fragment.EditDescriptionFragment;
+import me.buryinmind.android.app.fragment.UserDescriptionFragment;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
 import me.buryinmind.android.app.fragment.TimelineFragment;
 import me.buryinmind.android.app.model.Memory;
@@ -64,7 +53,7 @@ public class TimelineActivity extends AppCompatActivity {
 
     private TimelineFragment mTimelineFragment;
     private BirthdayFragment mBirthDayFragment;
-    private EditDescriptionFragment mEditDesFragment;
+    private UserDescriptionFragment mEditDesFragment;
     private MemoryAddFragment mAddFragment;
 
     private View mProgressView;
@@ -147,7 +136,7 @@ public class TimelineActivity extends AppCompatActivity {
         mAccountDesView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                goToNext(EditDescriptionFragment.class);
+                goToNext(UserDescriptionFragment.class);
             }
         });
 
@@ -206,7 +195,7 @@ public class TimelineActivity extends AppCompatActivity {
                 if (current != null) {
                     if (current instanceof BirthdayFragment) {
                         mBirthDayFragment.confirm();
-                    } else if (current instanceof EditDescriptionFragment) {
+                    } else if (current instanceof UserDescriptionFragment) {
                         mEditDesFragment.confirm();
                     } else if (current instanceof MemoryAddFragment) {
                         mAddFragment.confirm();
@@ -455,9 +444,9 @@ public class TimelineActivity extends AppCompatActivity {
                         .commit();
             }
         } else if (current instanceof TimelineFragment &&
-                clazz == EditDescriptionFragment.class) {
+                clazz == UserDescriptionFragment.class) {
             if (mEditDesFragment == null) {
-                mEditDesFragment = new EditDescriptionFragment();
+                mEditDesFragment = new UserDescriptionFragment();
                 mEditDesFragment.setListener(
                         new XBaseFragmentListener() {
                             @Override

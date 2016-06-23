@@ -42,6 +42,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             app:layoutManager="LinearLayoutManager"
+            tools:layout_height="50dp"
             tools:listitem="@layout/item_description">
         </android.support.v7.widget.RecyclerView>
     </LinearLayout>

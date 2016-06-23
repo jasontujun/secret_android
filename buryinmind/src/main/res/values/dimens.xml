@@ -10,6 +10,7 @@
 
     <dimen name="app_bar_height">300dp</dimen>
 
+    <dimen name="head_profile_tiny_size">35dp</dimen>
     <dimen name="head_profile_small_size">50dp</dimen>
     <dimen name="head_profile_middle_size">60dp</dimen>
     <dimen name="head_profile_big_size">80dp</dimen>

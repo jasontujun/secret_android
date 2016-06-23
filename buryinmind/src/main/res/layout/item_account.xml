@@ -25,13 +25,14 @@
                 app:civ_border_width="2dp"
                 app:civ_border_color="@color/darkGray"/>
             <ImageView
-                android:id="@+id/account_favorite"
+                android:id="@+id/account_state"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:layout_alignParentRight="true"
                 android:layout_alignParentBottom="true"
-                android:src="@drawable/icon_favorite_red"
-                android:visibility="gone"/>
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                tools:src="@drawable/icon_favorite_red"/>
         </RelativeLayout>
         <LinearLayout
             android:layout_width="wrap_content"

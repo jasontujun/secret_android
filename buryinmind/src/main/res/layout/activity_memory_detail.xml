@@ -22,19 +22,20 @@
             <android.support.design.widget.CollapsingToolbarLayout
                 android:id="@+id/toolbar_layout"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="@dimen/app_bar_height"
                 android:fitsSystemWindows="true"
                 app:contentScrim="?attr/colorPrimary"
                 app:layout_scrollFlags="scroll|exitUntilCollapsed"
                 app:collapsedTitleGravity="center"
-                app:expandedTitleGravity="center_vertical"
+                app:expandedTitleGravity="left|top"
+                app:expandedTitleMarginTop="50dp"
                 app:expandedTitleTextAppearance="@style/CoverText"
                 app:titleEnabled="true">
 
                 <!-- Memory Info -->
                 <RelativeLayout
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/app_bar_height"
+                    android:layout_height="match_parent"
                     android:fitsSystemWindows="true"
                     app:layout_collapseMode="parallax">
                     <FrameLayout
@@ -54,19 +55,52 @@
                             android:layout_height="match_parent"
                             android:background="@drawable/bg_memory_mask"/>
                     </FrameLayout>
-                    <TextView
-                        android:id="@+id/memory_time_view"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentBottom="true"
-                        android:layout_marginBottom="40dp"
+                        android:layout_alignBottom="@+id/memory_cover_layout"
+                        android:layout_marginBottom="10dp"
                         android:layout_marginLeft="20dp"
-                        android:padding="10dp"
-                        android:singleLine="true"
-                        android:textColor="@color/darkGray"
-                        android:textSize="@dimen/text_size_small"
-                        android:background="@drawable/bg_transparent_gray"
-                        tools:text="于 2006.10.26"/>
+                        android:orientation="vertical">
+                        <TextView
+                            android:id="@+id/memory_time_view"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="10dp"
+                            android:singleLine="true"
+                            android:textColor="@color/darkGray"
+                            android:textSize="@dimen/text_size_small"
+                            android:background="@drawable/bg_transparent_gray"
+                            tools:text="于 2006.10.26"/>
+                        <LinearLayout
+                            android:id="@+id/memory_out_gift_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingLeft="10dp"
+                            android:orientation="horizontal"
+                            android:visibility="gone">
+                            <TextView
+                                android:id="@+id/memory_out_gift_label"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="top"
+                                android:textColor="@color/gray"
+                                android:textSize="@dimen/text_size_small"
+                                android:background="@drawable/bg_transparent_gray"
+                                android:text="@string/info_memory_receiver"/>
+                            <android.support.v7.widget.RecyclerView
+                                android:id="@+id/memory_out_gift_list"
+                                android:layout_width="wrap_content"
+                                android:layout_height="58dp"
+                                app:layoutManager="LinearLayoutManager"
+                                tools:layout_height="58dp"
+                                tools:listitem="@layout/item_receiver"/>
+                        </LinearLayout>
+                        <View
+                            android:id="@+id/memory_author_padding"
+                            android:layout_width="wrap_content"
+                            android:layout_height="30dp"/>
+                    </LinearLayout>
                 </RelativeLayout>
                 <!-- ToolBar -->
                 <android.support.v7.widget.Toolbar

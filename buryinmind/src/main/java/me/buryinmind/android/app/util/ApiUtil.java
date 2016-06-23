@@ -24,6 +24,8 @@ public abstract class ApiUtil {
     private static final String DOMAIN = "http://192.168.1.107:3000";
     public static final String PUBLIC_DOMAIN = "http://o76ab22vz.bkt.clouddn.com";
 
+    public static final int SCOPE_PRIVATE = 1;
+    public static final int SCOPE_PUBLIC = 10;
 
     private static String getLocalUserId() {
         User user = ((GlobalSource) XDefaultDataRepo.getInstance()
@@ -235,7 +237,8 @@ public abstract class ApiUtil {
 
     public static XHttpRequest postMemory(String mid, String receiverId,
                                           String receiverName, List<String> receiverDes,
-                                          String question, String answer, long receiveTime) {
+                                          String question, String answer,
+                                          int scope, Long receiveTime) {
         JSONArray ja = new JSONArray();
         for (String des : receiverDes) {
             ja.put(des);
@@ -248,8 +251,13 @@ public abstract class ApiUtil {
                 .addStringParam("mid", mid)
                 .addStringParam("rid", receiverId)
                 .addStringParam("rname", receiverName)
-                .addStringParam("rdes", ja.toString())
-                .addStringParam("future", String.valueOf(receiveTime));
+                .addStringParam("rdes", ja.toString());
+        if (scope == SCOPE_PUBLIC || scope == SCOPE_PRIVATE) {
+            request.addStringParam("scope", String.valueOf(scope));
+        }
+        if (receiveTime != null) {
+            request.addStringParam("future", String.valueOf(receiveTime));
+        }
         if (!XStringUtil.isEmpty(question) && !XStringUtil.isEmpty(answer)) {
             request.addStringParam("question", question)
                     .addStringParam("answer", CryptoUtil.toMd5(answer));
@@ -273,6 +281,14 @@ public abstract class ApiUtil {
 
     public static XHttpRequest rejectMemory(String giftId) {
         return MyApplication.getHttp().newRequest(DOMAIN + "/memory/reject")
+                .setMethod(XHttpRequest.Method.POST)
+                .addStringParam("uid", getLocalUserId())
+                .addStringParam("token", getLocalToken())
+                .addStringParam("gid", giftId);
+    }
+
+    public static XHttpRequest cancelMemory(String giftId) {
+        return MyApplication.getHttp().newRequest(DOMAIN + "/memory/cancel")
                 .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", getLocalUserId())
                 .addStringParam("token", getLocalToken())

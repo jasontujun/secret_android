@@ -60,6 +60,7 @@ public class MemoryDetailFragment extends XFragment {
     public static final int REFRESH_COLLAPSE = 10;
     public static final int REFRESH_EXPAND = 11;
     public static final int REFRESH_MENU = 12;
+    public static final int REFRESH_OUT_GIFT = 13;
 
     private View mProgressView;
     private RecyclerView mSecretListView;
@@ -84,54 +85,11 @@ public class MemoryDetailFragment extends XFragment {
                     XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
             mMemory = source.getById(memoryId);
         }
+        // 创建Adapter
         mSecretAdapter = new EditAdapter(mMemory.secrets);
-        // 在onCreate时请求数据，可以避免fragment切换时过于频繁请求
-        requestDetail();
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        XLog.d(TAG, "onCreateView()");
-        DisplayMetrics outMetrics = new DisplayMetrics();
-        getActivity().getWindowManager().getDefaultDisplay().getMetrics(outMetrics);
-        mScreenWidth = outMetrics.widthPixels;
-
-        View rootView = inflater.inflate(R.layout.fragment_secret_list, container, false);
-        mProgressView = rootView.findViewById(R.id.loading_progress);
-        mSecretListView = (RecyclerView) rootView.findViewById(R.id.memory_secret_list);
-
-        // init recycler view
-        mSecretListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                super.onScrollStateChanged(recyclerView, newState);
-            }
-
-            @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                // 已经滑到顶部，不能再向上滑了
-                if (!ViewCompat.canScrollVertically(recyclerView, -1)) {
-                    if (!mListTop) {
-                        mListTop = true;
-                        if (mAutoExpand) {
-                            notifyRefresh(REFRESH_EXPAND, null);
-                        }
-                        XLog.d(TAG, "mSecretListView scroll to top! expand appbar!");
-                    } else {
-                        XLog.d(TAG, "mSecretListView already scroll to top! not expand appbar!");
-                    }
-                } else {
-                    mListTop = false;
-                }
-            }
-        });
-        mSecretListView.setLayoutManager(new XLinearLayoutManager(getActivity(),
-                LinearLayoutManager.VERTICAL, false));
-        mSecretListView.setAdapter(mSecretAdapter);
+        // 创建拖拽和滑动删除手势
         ItemTouchHelper.Callback mCallback = new ItemTouchHelper.SimpleCallback
-                (ItemTouchHelper.UP|ItemTouchHelper.DOWN, ItemTouchHelper.RIGHT) {
+                (ItemTouchHelper.UP | ItemTouchHelper.DOWN, ItemTouchHelper.RIGHT) {
             @Override
             public boolean onMove(RecyclerView recyclerView,
                                   RecyclerView.ViewHolder viewHolder,
@@ -201,7 +159,7 @@ public class MemoryDetailFragment extends XFragment {
                 super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
                 if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
                     //滑动时改变Item的透明度
-                    final float alpha = 1 - Math.abs(dX) / (float)viewHolder.itemView.getWidth();
+                    final float alpha = 1 - Math.abs(dX) / (float) viewHolder.itemView.getWidth();
                     viewHolder.itemView.setAlpha(alpha);
                     viewHolder.itemView.setTranslationX(dX);
                 }
@@ -233,7 +191,54 @@ public class MemoryDetailFragment extends XFragment {
             }
         };
         mItemTouchHelper = new ItemTouchHelper(mCallback);
-        mItemTouchHelper.attachToRecyclerView(mSecretListView);
+        // 在onCreate时请求数据，可以避免fragment切换时过于频繁请求
+        requestDetail();
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        XLog.d(TAG, "onCreateView()");
+        DisplayMetrics outMetrics = new DisplayMetrics();
+        getActivity().getWindowManager().getDefaultDisplay().getMetrics(outMetrics);
+        mScreenWidth = outMetrics.widthPixels;
+
+        View rootView = inflater.inflate(R.layout.fragment_secret_list, container, false);
+        mProgressView = rootView.findViewById(R.id.loading_progress);
+        mSecretListView = (RecyclerView) rootView.findViewById(R.id.memory_secret_list);
+
+        // init recycler view
+        mSecretListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                // 已经滑到顶部，不能再向上滑了
+                if (!ViewCompat.canScrollVertically(recyclerView, -1)) {
+                    if (!mListTop) {
+                        mListTop = true;
+                        if (mAutoExpand) {
+                            notifyRefresh(REFRESH_EXPAND, null);
+                        }
+                        XLog.d(TAG, "mSecretListView scroll to top! expand appbar!");
+                    } else {
+                        XLog.d(TAG, "mSecretListView already scroll to top! not expand appbar!");
+                    }
+                } else {
+                    mListTop = false;
+                }
+            }
+        });
+        mSecretListView.setLayoutManager(new XLinearLayoutManager(getActivity(),
+                LinearLayoutManager.VERTICAL, false));
+        mSecretListView.setAdapter(mSecretAdapter);
+        if (mMemory.editable) {
+            mItemTouchHelper.attachToRecyclerView(mSecretListView);
+        }
         return rootView;
     }
 
@@ -311,6 +316,7 @@ public class MemoryDetailFragment extends XFragment {
                             try {
                                 JSONArray giftArr = jo.getJSONArray("gifts");
                                 mMemory.outGifts = MemoryGift.fromJson(giftArr);
+                                notifyRefresh(REFRESH_OUT_GIFT, mMemory.outGifts);
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
@@ -571,17 +577,21 @@ public class MemoryDetailFragment extends XFragment {
                         .into(imageView);
             }
             // set drag handle
-            holder.getView(R.id.secret_item_handle).setOnTouchListener(
-                    new View.OnTouchListener() {
-                        @Override
-                        public boolean onTouch(View v, MotionEvent event) {
-                            if (MotionEventCompat.getActionMasked(event) ==
-                                    MotionEvent.ACTION_DOWN) {
-                                mItemTouchHelper.startDrag(holder);
+            if (mMemory.editable) {
+                holder.getView(R.id.secret_item_handle).setOnTouchListener(
+                        new View.OnTouchListener() {
+                            @Override
+                            public boolean onTouch(View v, MotionEvent event) {
+                                if (MotionEventCompat.getActionMasked(event) ==
+                                        MotionEvent.ACTION_DOWN) {
+                                    mItemTouchHelper.startDrag(holder);
+                                }
+                                return false;
                             }
-                            return false;
-                        }
-                    });
+                        });
+            } else {
+                holder.getView(R.id.secret_item_handle).setOnTouchListener(null);
+            }
             // set progress
             TextView progressView = (TextView) holder.getView(R.id.secret_item_progress);
             if (item.completeSize >= 0) {

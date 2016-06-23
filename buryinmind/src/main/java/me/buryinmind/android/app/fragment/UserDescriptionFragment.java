@@ -26,7 +26,7 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * Created by jasontujun on 2016/6/15.
  */
-public class EditDescriptionFragment extends XFragment {
+public class UserDescriptionFragment extends XFragment {
 
     private RecyclerView mDescriptionList;
     private DescriptionAdapter mDescriptionAdapter;
@@ -56,7 +56,7 @@ public class EditDescriptionFragment extends XFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_edit_description , container, false);
+        View rootView = inflater.inflate(R.layout.fragment_user_description, container, false);
         mDescriptionList = (RecyclerView) rootView.findViewById(R.id.account_des_list);
         // 初始化描述列表
         mDescriptionList.setLayoutManager(new XAutoGridLayoutManager(getActivity(), 2000));

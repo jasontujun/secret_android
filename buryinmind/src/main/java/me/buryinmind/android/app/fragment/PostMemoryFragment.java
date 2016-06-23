@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -106,7 +105,7 @@ public class PostMemoryFragment extends XFragment {
         if (XStringUtil.isEmpty(mReceiver.uid)) {
             mLockPromptView.setText(R.string.info_post_lock_required);
         } else {
-            mLockPromptView.setText(R.string.info_post_lock);
+            mLockPromptView.setText(R.string.info_post_lock_optional);
         }
         mQuestionInputView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
@@ -199,6 +198,7 @@ public class PostMemoryFragment extends XFragment {
             ViewUtil.animationShake(mLockBtn);
             return;
         }
+        // TODO 弹出确认对话框
         postMemory();
     }
 
@@ -224,7 +224,10 @@ public class PostMemoryFragment extends XFragment {
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.postMemory(mMemory.mid, mReceiver.uid,
                         mReceiver.name, mReceiver.descriptions,
-                        mQuestion, mAnswer, 0),
+                        mQuestion, mAnswer,
+                        XStringUtil.isEmpty(mReceiver.uid) ?
+                                ApiUtil.SCOPE_PUBLIC : ApiUtil.SCOPE_PRIVATE,
+                        null),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
                     @Override

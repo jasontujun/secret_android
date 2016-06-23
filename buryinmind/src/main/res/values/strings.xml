@@ -76,9 +76,13 @@
     <string name="info_all_image">All pictures</string>
     <string name="info_memory_sender">From %1$s</string>
     <string name="info_memory_author">From:</string>
+    <string name="info_memory_receiver">Post to:</string>
+    <string name="info_memory_receiver_taken">\"%1$s\" has received this memory! ^_^</string>
+    <string name="info_memory_receiver_reject">Sorry, \"%1$s\" has rejected this memory</string>
+    <string name="info_memory_receiver_cancel">\"%1$s\" has not received this memory，Sure to cancel?</string>
     <string name="info_memory_time">At %1$s</string>
     <string name="info_post_new_user">\"%1$s\" not exist？\nAdd him/her into \"Never Forgot\"</string>
-    <string name="info_post_lock">You can set a question to lock the memory</string>
+    <string name="info_post_lock_optional">You can set a question to lock the memory</string>
     <string name="info_post_lock_required">Because of undefined receiver, you have to add a question
         to lock the memory to avoid being received in error by strangers</string>
 

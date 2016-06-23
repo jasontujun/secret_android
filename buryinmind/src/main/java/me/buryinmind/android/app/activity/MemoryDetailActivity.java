@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -33,14 +35,20 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.adapter.XListAdapter;
+import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.controller.ProgressListener;
+import me.buryinmind.android.app.dialog.ConfirmDialog;
+import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
 import me.buryinmind.android.app.fragment.MemoryDetailFragment;
 import me.buryinmind.android.app.fragment.PostMemoryFragment;
 import me.buryinmind.android.app.fragment.SearchFriendsFragment;
 import me.buryinmind.android.app.model.Memory;
+import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.Secret;
 import me.buryinmind.android.app.model.User;
+import me.buryinmind.android.app.uicontrol.XLinearLayoutManager;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.FileUtils;
 import me.buryinmind.android.app.util.ImageUtil;
@@ -66,8 +74,14 @@ public class MemoryDetailActivity extends AppCompatActivity {
     private View mMemoryCoverMask;
     private View mMemoryCoverLayout;
     private TextView mMemoryTime;
+    private View mOutGiftLayout;
+    private RecyclerView mOutGiftList;
+    private GiftAdapter mOutGiftAdapter;
+    private View mAuthorLayout;
+    private ImageView mAuthorHeader;
     private TextView mAuthorName;
     private TextView mAuthorNameLabel;
+    private View mAuthorPadding;
     private Toolbar mToolBar;
     private MenuItem mAddBtn;
     private MenuItem mPostBtn;
@@ -102,10 +116,13 @@ public class MemoryDetailActivity extends AppCompatActivity {
         mMemoryCoverMask = findViewById(R.id.memory_cover_image_mask);
         mMemoryCoverLayout = findViewById(R.id.memory_cover_layout);
         mMemoryTime = (TextView) findViewById(R.id.memory_time_view);
-        View mAuthorLayout = findViewById(R.id.memory_author_layout);
-        ImageView mAuthorHeader = (ImageView) findViewById(R.id.memory_author_head_img);
+        mOutGiftLayout = findViewById(R.id.memory_out_gift_layout);
+        mOutGiftList = (RecyclerView) findViewById(R.id.memory_out_gift_list);
+        mAuthorLayout = findViewById(R.id.memory_author_layout);
+        mAuthorHeader = (ImageView) findViewById(R.id.memory_author_head_img);
         mAuthorName = (TextView) findViewById(R.id.memory_author_name_txt);
         mAuthorNameLabel = (TextView) findViewById(R.id.memory_author_name_label);
+        mAuthorPadding = findViewById(R.id.memory_author_padding);
 
         // init toolbar
         mCollapsedLayout.setTitle(mMemory.name);
@@ -123,26 +140,13 @@ public class MemoryDetailActivity extends AppCompatActivity {
             }
         });
 
+        // init OutGiftList
+        mOutGiftAdapter = new GiftAdapter();
+        mOutGiftList.setLayoutManager(new XLinearLayoutManager(this,
+                LinearLayoutManager.HORIZONTAL, false));
+        mOutGiftList.setAdapter(mOutGiftAdapter);
         // init cover
-        if (XStringUtil.isEmpty(mMemory.coverUrl)) {
-            mMemoryCoverMask.setVisibility(View.GONE);
-            mMemoryTime.setTextColor(getResources().getColor(R.color.white));
-            mAuthorName.setTextColor(getResources().getColor(R.color.white));
-            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.white));
-            mMemoryCoverView.setImageResource(R.color.darkGray);
-        } else {
-            mMemoryCoverMask.setVisibility(View.VISIBLE);
-            mMemoryTime.setTextColor(getResources().getColor(R.color.darkGray));
-            mAuthorName.setTextColor(getResources().getColor(R.color.gray));
-            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.gray));
-            Glide.with(this)
-                    .load(mMemory.coverUrl)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .priority(Priority.HIGH)
-                    .placeholder(R.color.darkGray)
-                    .error(R.color.darkGray)
-                    .into(mMemoryCoverView);
-        }
+        refreshCover(mMemory.coverUrl);
         if (mMemory.editable) {
             mMemoryCoverLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -185,6 +189,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
         }
         if (!mMemory.authorId.equals(mMemory.ownerId)) {
             mAuthorLayout.setVisibility(View.VISIBLE);
+            mAuthorPadding.setVisibility(View.VISIBLE);
             Glide.with(MemoryDetailActivity.this)
                     .load(ApiUtil.getIdUrl(mMemory.authorId))
                     .dontAnimate()
@@ -194,6 +199,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
             mAuthorName.setText(mMemory.authorName);
         } else {
             mAuthorLayout.setVisibility(View.GONE);
+            mAuthorPadding.setVisibility(View.GONE);
         }
 
         // 为了先执行onCreateOptionsMenu(),所以延迟添加Fragment
@@ -270,6 +276,9 @@ public class MemoryDetailActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
+                    if (mWaiting) {
+                        return;
+                    }
                     mWaiting = true;
                     // 如果设置了封面图片，则压缩并上传图片
                     ImageUtil.compressAndUploadImage(MemoryDetailActivity.this,
@@ -311,15 +320,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
                                                         mMemoryCoverMask.setVisibility(View.VISIBLE);
                                                         mWaiting = false;
                                                         // 刷新封面图片
-                                                        mMemoryCoverMask.setVisibility(View.VISIBLE);
-                                                        mMemoryTime.setTextColor(getResources().getColor(R.color.darkGray));
-                                                        mAuthorName.setTextColor(getResources().getColor(R.color.gray));
-                                                        mAuthorNameLabel.setTextColor(getResources().getColor(R.color.gray));
-                                                        Glide.with(MemoryDetailActivity.this)
-                                                                .load(path)
-                                                                .placeholder(R.color.darkGray)
-                                                                .error(R.color.darkGray)
-                                                                .into(mMemoryCoverView);
+                                                        refreshCover(path);
                                                     }
                                                 });
                                     } else {
@@ -359,7 +360,11 @@ public class MemoryDetailActivity extends AppCompatActivity {
             return;
         }
         if (current instanceof MemoryDetailFragment) {
-            mAddBtn.setVisible(true);
+            if (mMemory.editable) {
+                mAddBtn.setVisible(true);
+            } else {
+                mAddBtn.setVisible(false);
+            }
             if (mMemory.secrets.size() > 0) {
                 mPostBtn.setVisible(true);
             } else {
@@ -374,6 +379,37 @@ public class MemoryDetailActivity extends AppCompatActivity {
             mAddBtn.setVisible(false);
             mPostBtn.setVisible(false);
             mDoneBtn.setVisible(true);
+        }
+    }
+
+    private void refreshCover(String url) {
+        if (XStringUtil.isEmpty(url)) {
+            mMemoryCoverMask.setVisibility(View.GONE);
+            mMemoryTime.setTextColor(getResources().getColor(R.color.white));
+            mAuthorName.setTextColor(getResources().getColor(R.color.white));
+            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.white));
+            mMemoryCoverView.setImageResource(R.color.darkGray);
+        } else {
+            mMemoryCoverMask.setVisibility(View.VISIBLE);
+            mMemoryTime.setTextColor(getResources().getColor(R.color.darkGray));
+            mAuthorName.setTextColor(getResources().getColor(R.color.gray));
+            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.gray));
+            Glide.with(this)
+                    .load(url)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .priority(Priority.HIGH)
+                    .placeholder(R.color.darkGray)
+                    .error(R.color.darkGray)
+                    .into(mMemoryCoverView);
+        }
+    }
+
+    private void refreshOutGift() {
+        if (mMemory.outGifts == null || mMemory.outGifts.size() == 0) {
+            mOutGiftLayout.setVisibility(View.GONE);
+        } else {
+            mOutGiftLayout.setVisibility(View.VISIBLE);
+            mOutGiftAdapter.setData(mMemory.outGifts);
         }
     }
 
@@ -413,6 +449,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
             @Override
             public void onEnter() {
                 refreshMenu();
+                refreshOutGift();
                 mAppBar.setExpanded(true, true);
                 fragment.needScrollToTop();
             }
@@ -432,6 +469,9 @@ public class MemoryDetailActivity extends AppCompatActivity {
                     case MemoryDetailFragment.REFRESH_MENU:
                         refreshMenu();
                         break;
+                    case MemoryDetailFragment.REFRESH_OUT_GIFT:
+                        refreshOutGift();
+                        break;
                 }
             }
         });
@@ -448,6 +488,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
                     @Override
                     public void onEnter() {
                         refreshMenu();
+                        mOutGiftLayout.setVisibility(View.GONE);
                         if (!mCollapsed) {
                             XLog.d(TAG, "try collapseToolBar..");
                             mAppBar.setExpanded(false, true);
@@ -471,6 +512,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
             @Override
             public void onEnter() {
                 refreshMenu();
+                mOutGiftLayout.setVisibility(View.GONE);
                 mAppBar.setExpanded(true, true);
             }
 
@@ -490,5 +532,102 @@ public class MemoryDetailActivity extends AppCompatActivity {
         arguments.putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
         fragment.setArguments(arguments);
         return fragment;
+    }
+
+    private void cancelMemory(final MemoryGift gift) {
+        if (mWaiting) {
+            return;
+        }
+        mWaiting = true;
+        MyApplication.getAsyncHttp().execute(
+                ApiUtil.cancelMemory(gift.gid),
+                new XAsyncHttp.Listener() {
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                        mWaiting = false;
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                        mWaiting = false;
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                        mWaiting = false;
+                        mMemory.outGifts.remove(gift);
+                        refreshOutGift();
+                    }
+                });
+    }
+
+
+    private class GiftAdapter extends XListAdapter<MemoryGift> {
+
+        public GiftAdapter() {
+            super(R.layout.item_receiver);
+        }
+
+        @Override
+        public void onBindViewHolder(XViewHolder holder, int position) {
+            final MemoryGift item = getData().get(position);
+            TextView nameView = (TextView) holder.getView(R.id.account_name_txt);
+            nameView.setText(item.receiverName);
+            Glide.with(MemoryDetailActivity.this)
+                    .load(ApiUtil.getIdUrl(item.receiverId))
+                    .dontAnimate()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .error(R.drawable.headicon_default)
+                    .into(holder.getView(R.id.account_head_img, ImageView.class));
+            if (item.takeTime == -1) {
+                holder.getView(R.id.account_state, ImageView.class)
+                        .setImageResource(R.drawable.icon_cancel_red);
+            } else if (item.takeTime > 0) {
+                holder.getView(R.id.account_state, ImageView.class)
+                        .setImageResource(R.drawable.icon_check_box_green);
+            } else if (item.takeTime == 0) {
+                holder.getView(R.id.account_state, ImageView.class)
+                        .setImageResource(R.drawable.icon_check_box_uncertain_blue);
+            }
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (item.takeTime == -1) {
+                        Toast.makeText(MemoryDetailActivity.this, String.format(getResources()
+                                        .getString(R.string.info_memory_receiver_reject), item.receiverName),
+                                Toast.LENGTH_SHORT).show();
+                    } else if (item.takeTime > 0) {
+                        Toast.makeText(MemoryDetailActivity.this, String.format(getResources()
+                                        .getString(R.string.info_memory_receiver_taken), item.receiverName),
+                                Toast.LENGTH_SHORT).show();
+                    } else if (item.takeTime == 0) {
+                        if (mWaiting) {
+                            Toast.makeText(MemoryDetailActivity.this, R.string.error_loading, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        // 撤销寄出的回忆，弹出提示对话框！
+                        ConfirmDialog.newInstance(String.format(getResources()
+                                        .getString(R.string.info_memory_receiver_cancel), item.receiverName),
+                                new DialogListener() {
+                                    boolean confirm = false;
+
+                                    @Override
+                                    public void onDone(Object... result) {
+                                        confirm = (boolean) result[0];
+                                        if (confirm) {
+                                            // 撤销回忆
+                                            cancelMemory(item);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onDismiss() {}
+                                }).show(getFragmentManager(), ConfirmDialog.TAG);
+                    }
+                }
+            });
+        }
     }
 }

@@ -329,10 +329,12 @@ public class SearchFriendsFragment extends XFragment {
                 holder.getView(R.id.account_name_txt, TextView.class).setText(user.name);
                 holder.getView(R.id.account_des_txt, TextView.class)
                         .setText(XStringUtil.list2String(user.descriptions, ", "));
+                ImageView userState = (ImageView) holder.getView(R.id.account_state);
                 if (user.isFriend) {
-                    holder.getView(R.id.account_favorite).setVisibility(View.VISIBLE);
+                    userState.setVisibility(View.VISIBLE);
+                    userState.setImageResource(R.drawable.icon_favorite_red);
                 } else {
-                    holder.getView(R.id.account_favorite).setVisibility(View.GONE);
+                    userState.setVisibility(View.GONE);
                 }
                 Glide.with(getActivity())
                         .load(ApiUtil.getIdUrl(user.uid))
