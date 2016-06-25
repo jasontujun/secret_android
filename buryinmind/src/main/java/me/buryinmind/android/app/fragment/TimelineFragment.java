@@ -43,6 +43,7 @@ import java.util.Map;
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.activity.MemoryDetailActivity;
+import me.buryinmind.android.app.activity.MemoryGiftActivity;
 import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.dialog.ConfirmDialog;
@@ -589,7 +590,6 @@ public class TimelineFragment extends XFragment {
                             XStringUtil.calendar2str(TimeUtil.getCalendar(item.happenStartTime), "."));
                     ImageView memoryImage = (ImageView) holder.getView(R.id.timeline_node_img);
                     if (!XStringUtil.isEmpty(item.coverUrl)) {
-                        memoryImage.setVisibility(View.VISIBLE);
                         Glide.with(TimelineFragment.this)
                                 .load(item.coverUrl)
                                 .diskCacheStrategy(DiskCacheStrategy.ALL)
@@ -597,7 +597,7 @@ public class TimelineFragment extends XFragment {
                                 .error(R.color.darkGray)
                                 .into(memoryImage);
                     } else {
-                        memoryImage.setVisibility(View.GONE);
+                        memoryImage.setImageResource(R.color.darkGray);
                     }
                     // 是自己的或已接收的回忆
                     final SwipeLayout swipeLayout = (SwipeLayout) holder.getView(R.id.timeline_node_swipe_layout);
@@ -611,7 +611,7 @@ public class TimelineFragment extends XFragment {
                                 new View.OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
-                                        Intent intent = new Intent(getActivity(), MemoryDetailActivity.class);
+                                        Intent intent = new Intent(getActivity(), MemoryGiftActivity.class);
                                         intent.putExtra("mid", item.mid);
                                         startActivity(intent);
                                     }

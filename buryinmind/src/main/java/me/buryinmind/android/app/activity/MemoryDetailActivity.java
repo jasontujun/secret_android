@@ -73,14 +73,13 @@ public class MemoryDetailActivity extends AppCompatActivity {
     private ImageView mMemoryCoverView;
     private View mMemoryCoverMask;
     private View mMemoryCoverLayout;
-    private TextView mMemoryTime;
+    private TextView mMemoryTimeView;
     private View mOutGiftLayout;
     private RecyclerView mOutGiftList;
     private GiftAdapter mOutGiftAdapter;
     private View mAuthorLayout;
     private ImageView mAuthorHeader;
     private TextView mAuthorName;
-    private TextView mAuthorNameLabel;
     private View mAuthorPadding;
     private Toolbar mToolBar;
     private MenuItem mAddBtn;
@@ -115,13 +114,12 @@ public class MemoryDetailActivity extends AppCompatActivity {
         mMemoryCoverView = (ImageView) findViewById(R.id.memory_cover_image);
         mMemoryCoverMask = findViewById(R.id.memory_cover_image_mask);
         mMemoryCoverLayout = findViewById(R.id.memory_cover_layout);
-        mMemoryTime = (TextView) findViewById(R.id.memory_time_view);
+        mMemoryTimeView = (TextView) findViewById(R.id.memory_time_view);
         mOutGiftLayout = findViewById(R.id.memory_out_gift_layout);
         mOutGiftList = (RecyclerView) findViewById(R.id.memory_out_gift_list);
         mAuthorLayout = findViewById(R.id.memory_author_layout);
         mAuthorHeader = (ImageView) findViewById(R.id.memory_author_head_img);
         mAuthorName = (TextView) findViewById(R.id.memory_author_name_txt);
-        mAuthorNameLabel = (TextView) findViewById(R.id.memory_author_name_label);
         mAuthorPadding = findViewById(R.id.memory_author_padding);
 
         // init toolbar
@@ -172,10 +170,10 @@ public class MemoryDetailActivity extends AppCompatActivity {
             });
         }
         // init author and info
-        mMemoryTime.setText(String.format(getResources().getString(R.string.info_memory_time),
+        mMemoryTimeView.setText(String.format(getResources().getString(R.string.info_memory_time),
                 XStringUtil.calendar2str(TimeUtil.getCalendar(mMemory.happenStartTime), ".")));
         if (mMemory.editable) {
-            mMemoryTime.setOnClickListener(new View.OnClickListener() {
+            mMemoryTimeView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
@@ -385,15 +383,9 @@ public class MemoryDetailActivity extends AppCompatActivity {
     private void refreshCover(String url) {
         if (XStringUtil.isEmpty(url)) {
             mMemoryCoverMask.setVisibility(View.GONE);
-            mMemoryTime.setTextColor(getResources().getColor(R.color.white));
-            mAuthorName.setTextColor(getResources().getColor(R.color.white));
-            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.white));
             mMemoryCoverView.setImageResource(R.color.darkGray);
         } else {
             mMemoryCoverMask.setVisibility(View.VISIBLE);
-            mMemoryTime.setTextColor(getResources().getColor(R.color.darkGray));
-            mAuthorName.setTextColor(getResources().getColor(R.color.gray));
-            mAuthorNameLabel.setTextColor(getResources().getColor(R.color.gray));
             Glide.with(this)
                     .load(url)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)

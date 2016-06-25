@@ -48,7 +48,6 @@ import me.buryinmind.android.app.uicontrol.XLinearLayoutManager;
 import me.buryinmind.android.app.adapter.XListAdapter;
 import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.util.ApiUtil;
-import me.buryinmind.android.app.util.ViewUtil;
 
 /**
  * Created by jasontujun on 2016/6/8.
@@ -62,9 +61,8 @@ public class MemoryDetailFragment extends XFragment {
     public static final int REFRESH_MENU = 12;
     public static final int REFRESH_OUT_GIFT = 13;
 
-    private View mProgressView;
     private RecyclerView mSecretListView;
-    private EditAdapter mSecretAdapter;
+    private SecretAdapter mSecretAdapter;
     private ItemTouchHelper mItemTouchHelper;
 
     private Memory mMemory;
@@ -86,7 +84,7 @@ public class MemoryDetailFragment extends XFragment {
             mMemory = source.getById(memoryId);
         }
         // 创建Adapter
-        mSecretAdapter = new EditAdapter(mMemory.secrets);
+        mSecretAdapter = new SecretAdapter(mMemory.secrets);
         // 创建拖拽和滑动删除手势
         ItemTouchHelper.Callback mCallback = new ItemTouchHelper.SimpleCallback
                 (ItemTouchHelper.UP | ItemTouchHelper.DOWN, ItemTouchHelper.RIGHT) {
@@ -204,7 +202,6 @@ public class MemoryDetailFragment extends XFragment {
         mScreenWidth = outMetrics.widthPixels;
 
         View rootView = inflater.inflate(R.layout.fragment_secret_list, container, false);
-        mProgressView = rootView.findViewById(R.id.loading_progress);
         mSecretListView = (RecyclerView) rootView.findViewById(R.id.memory_secret_list);
 
         // init recycler view
@@ -279,16 +276,12 @@ public class MemoryDetailFragment extends XFragment {
         }
     }
 
-    private void showProgress(final boolean show) {
-        ViewUtil.animateFadeInOut(mSecretListView, show);
-        ViewUtil.animateFadeInOut(mProgressView, !show);
-    }
 
     private boolean requestDetail() {
         if (mWaiting)
             return false;
         mWaiting = true;
-        showProgress(true);
+        notifyLoading(true);
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.getMemoryDetail(mMemory.mid),
                 new XJsonObjectHandler(),
@@ -296,21 +289,21 @@ public class MemoryDetailFragment extends XFragment {
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
-                        showProgress(false);
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
-                        showProgress(false);
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
                         mWaiting = false;
-                        showProgress(false);
+                        notifyLoading(false);
                         List<Secret> secrets = null;
                         if (jo.has("gifts") && !jo.isNull("gifts")) {
                             try {
@@ -379,7 +372,7 @@ public class MemoryDetailFragment extends XFragment {
     }
 
     public void addSecret(final List<Secret> secrets) {
-        showProgress(true);
+        notifyLoading(true);
         // 先在服务器端创建secret
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.addSecret(mMemory.mid, secrets),
@@ -387,19 +380,19 @@ public class MemoryDetailFragment extends XFragment {
                 new XAsyncHttp.Listener<JSONArray>() {
                     @Override
                     public void onNetworkError() {
-                        showProgress(false);
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
-                        showProgress(false);
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray jsonArray) {
-                        showProgress(false);
+                        notifyLoading(false);
                         for (int i = 0; i < jsonArray.length(); i++) {
                             try {
                                 JSONObject jo = jsonArray.getJSONObject(i);
@@ -521,8 +514,8 @@ public class MemoryDetailFragment extends XFragment {
         );
     }
 
-    private class EditAdapter extends XListAdapter<Secret> {
-        public EditAdapter(List<Secret> items) {
+    private class SecretAdapter extends XListAdapter<Secret> {
+        public SecretAdapter(List<Secret> items) {
             super(R.layout.item_edit_secret, items);
         }
 

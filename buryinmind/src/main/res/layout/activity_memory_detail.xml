@@ -68,7 +68,7 @@
                             android:layout_height="wrap_content"
                             android:padding="10dp"
                             android:singleLine="true"
-                            android:textColor="@color/darkGray"
+                            android:textColor="@color/gray"
                             android:textSize="@dimen/text_size_small"
                             android:background="@drawable/bg_transparent_gray"
                             tools:text="于 2006.10.26"/>
@@ -133,7 +133,6 @@
             app:layout_anchorGravity="bottom|right|end"
             app:layout_behavior="me.buryinmind.android.app.uicontrol.ScaleBehavior">
             <TextView
-                android:id="@+id/memory_author_name_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/gray"
