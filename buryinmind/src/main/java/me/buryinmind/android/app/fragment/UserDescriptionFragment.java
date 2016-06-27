@@ -7,8 +7,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 
 import java.util.ArrayList;
@@ -87,9 +87,15 @@ public class UserDescriptionFragment extends XFragment {
             return;
         mWaiting = true;
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.updateDescription(descriptions),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -112,6 +118,6 @@ public class UserDescriptionFragment extends XFragment {
                         user.descriptions = new ArrayList<String>(descriptions);
                         notifyFinish(true, descriptions);
                     }
-                });
+                }));
     }
 }

@@ -14,7 +14,6 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -144,9 +143,9 @@ public class ImageSelectorActivity extends AppCompatActivity {
                 mProgressDialog.dismiss();
             }
             mLoadLocalImageTask.cancel(true);
-        } else {
-            supportFinishAfterTransition();
+            return;
         }
+        super.onBackPressed();
     }
 
     private void selectImageFolder(ImageFolder folder) {
@@ -162,7 +161,7 @@ public class ImageSelectorActivity extends AppCompatActivity {
     /**
      * 初始化展示文件夹的popupWindow
      */
-    private void initPopupWindw() {
+    private void initPopupWindow() {
         mListImageDirPopupWindow = new DirPopupWindow(
                 LayoutInflater.from(getApplicationContext()).inflate(R.layout.fragment_dir, null),
                 ViewGroup.LayoutParams.MATCH_PARENT, (int) (mScreenHeight * 0.7),
@@ -220,13 +219,23 @@ public class ImageSelectorActivity extends AppCompatActivity {
                                 + MediaStore.Images.Media.MIME_TYPE + "=?",
                         new String[] {Secret.MIME_JPEG, Secret.MIME_PNG},
                         MediaStore.Images.Media.DATE_MODIFIED);
-
+                if (cursor == null) {
+                    return null;
+                }
+                if (isCancelled()) {// 不要忘记及时cancelled状态
+                    cursor.close();
+                    return null;
+                }
                 XLog.e(TAG, "search count=" + cursor.getCount());
                 Map<String, ImageFolder> dirPathMap = new HashMap<String, ImageFolder>();
                 ImageFolder allImage = new ImageFolder(ALL_IMAGE_DIR, "所有照片");
                 mImageFolders.add(allImage);
                 // 遍历所有图片，按文件夹归类
                 while (cursor.moveToNext()) {
+                    if (isCancelled()) {// 不要忘记及时cancelled状态
+                        cursor.close();
+                        return null;
+                    }
                     String imagePath = cursor.getString(cursor
                             .getColumnIndex(MediaStore.Images.Media.DATA));
                     allImage.addImage(imagePath);// 直接加入所有图片中
@@ -260,7 +269,7 @@ public class ImageSelectorActivity extends AppCompatActivity {
                 }
                 selectImageFolder(mImageFolders.get(0));
                 // 初始化展示文件夹的popupWindw
-                initPopupWindw();
+                initPopupWindow();
             }
 
             @Override

@@ -11,9 +11,9 @@ import com.qiniu.android.http.ResponseInfo;
 import com.qiniu.android.storage.UpCompletionHandler;
 import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadOptions;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XStorageUtil;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpRequest;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
@@ -136,8 +136,7 @@ public abstract class ImageUtil {
     }
 
 
-    public static void uploadImage(final Context context,
-                                   final XHttpRequest tokenRequest,
+    public static void uploadImage(final XHttpRequest tokenRequest,
                                    final String filePath,
                                    final ProgressListener<String> listener) {
         final long totalSize = new File(filePath).length();
@@ -148,6 +147,11 @@ public abstract class ImageUtil {
                 tokenRequest,
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {
+
+                    }
+
                     @Override
                     public void onNetworkError() {
                         if (listener != null)
@@ -225,7 +229,7 @@ public abstract class ImageUtil {
                         public void onResult(boolean result, final String compressFilePath) {
                             if (result) {
                                 // 压缩成功，上传图片文件
-                                uploadImage(context, tokenRequest, compressFilePath,
+                                uploadImage(tokenRequest, compressFilePath,
                                         new ProgressListener<String>() {
                                             @Override
                                             public void onProgress(String data, long completeSize, long totalSize) {
@@ -250,7 +254,7 @@ public abstract class ImageUtil {
                     });
         } else {
             // 大小没超过上限，直接上传
-            uploadImage(context, tokenRequest, filePath, listener);
+            uploadImage(tokenRequest, filePath, listener);
         }
     }
 }

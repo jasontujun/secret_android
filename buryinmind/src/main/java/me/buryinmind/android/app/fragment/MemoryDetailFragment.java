@@ -18,12 +18,12 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -58,7 +58,7 @@ public class MemoryDetailFragment extends XFragment {
     public static final String KEY_MID = "mid";
     public static final int REFRESH_COLLAPSE = 10;
     public static final int REFRESH_EXPAND = 11;
-    public static final int REFRESH_MENU = 12;
+    public static final int REFRESH_DATA = 12;
     public static final int REFRESH_OUT_GIFT = 13;
 
     private RecyclerView mSecretListView;
@@ -71,11 +71,14 @@ public class MemoryDetailFragment extends XFragment {
     private int mScreenWidth;
     private boolean mWaiting;
     private boolean mReorder;// 是否需要同步secret的顺序
+    private ProgressListener<Secret> mDownloadListener;
+    private ProgressListener<Secret> mUploadListener;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         XLog.d(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
+        // 获取Memory
         Bundle argument = getArguments();
         if (argument != null) {
             String memoryId = argument.getString(KEY_MID);
@@ -243,12 +246,58 @@ public class MemoryDetailFragment extends XFragment {
     public void onStart() {
         super.onStart();
         XLog.d(TAG, "onStart()");
+        if (mDownloadListener == null) {
+            mDownloadListener = new ProgressListener<Secret>() {
+                @Override
+                public void onProgress(Secret secret,
+                                       long completeSize,
+                                       long totalSize) {
+                    mSecretAdapter.refreshData(secret, new Object());
+                }
+
+                @Override
+                public void onResult(boolean result, Secret secret) {
+                    if (result && mSecretAdapter.getData().indexOf(secret) != -1) {
+                        // 本地缓存文件路径，同步到数据库
+                        SecretSource source = (SecretSource) XDefaultDataRepo.getInstance()
+                                .getSource(MyApplication.SOURCE_SECRET);
+                        source.saveToDatabase(secret);
+                        // 局部刷新列表的对应一项
+                        XLog.d(TAG, "下载secret成功.id=" + secret.sid);
+                        mSecretAdapter.refreshData(secret, null);
+                    }
+                }
+            };
+        }
+        MyApplication.getSecretDownloader().registerListener(mDownloadListener);
+        if (mUploadListener == null) {
+            mUploadListener = new ProgressListener<Secret>() {
+                @Override
+                public void onProgress(Secret secret,
+                                       long completeSize,
+                                       long totalSize) {
+                    mSecretAdapter.refreshData(secret, new Object());
+                }
+
+                @Override
+                public void onResult(boolean result, Secret secret) {
+                    if (!result) {
+                        Toast.makeText(getActivity(),
+                                "上传Secret失败!", Toast.LENGTH_SHORT).show();
+                    }
+                    mSecretAdapter.refreshData(secret, null);
+                }
+            };
+        }
+        MyApplication.getSecretUploader().registerListener(mUploadListener);
     }
 
     @Override
     public void onStop() {
-        super.onStart();
+        super.onStop();
         XLog.d(TAG, "onStop()");
+        MyApplication.getSecretDownloader().unregisterListener(mDownloadListener);
+        MyApplication.getSecretUploader().unregisterListener(mUploadListener);
     }
 
     @Override
@@ -282,10 +331,16 @@ public class MemoryDetailFragment extends XFragment {
             return false;
         mWaiting = true;
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.getMemoryDetail(mMemory.mid),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -328,56 +383,33 @@ public class MemoryDetailFragment extends XFragment {
                                     .getSource(MyApplication.SOURCE_SECRET);
                             source.addAll(secrets);
                             mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                            notifyRefresh(REFRESH_MENU, null);
+                            notifyRefresh(REFRESH_DATA, null);
                             mSecretAdapter.setData(mMemory.secrets);
-                            // 刷新列表
+                            // 缓存Secret文件
                             for (Secret secret : mMemory.secrets) {
-                                // Secret文件已下载，直接显示
-                                if (!XStringUtil.isEmpty(secret.localPath)) {
-                                    File file = new File(secret.localPath);
-                                    if (file.exists() && file.length() == secret.size) {
-                                        mSecretAdapter.refreshData(secret, null);
-                                        continue;
-                                    }
+                                if (XStringUtil.isEmpty(secret.localPath) || (secret.size != 0 &&
+                                        new File(secret.localPath).length() != secret.size)) {
+                                    MyApplication.getSecretDownloader().download(secret);
                                 }
-                                // 否则，重新下载
-                                MyApplication.getSecretDownloader().download(secret,
-                                        new ProgressListener<Secret>() {
-                                            @Override
-                                            public void onProgress(Secret secret,
-                                                                   long completeSize,
-                                                                   long totalSize) {
-                                                mSecretAdapter.refreshData(secret, new Object());
-                                            }
-
-                                            @Override
-                                            public void onResult(boolean result, Secret secret) {
-                                                if (result) {
-                                                    // 本地缓存文件路径，同步到数据库
-                                                    SecretSource source = (SecretSource) XDefaultDataRepo.getInstance()
-                                                            .getSource(MyApplication.SOURCE_SECRET);
-                                                    source.saveToDatabase(secret);
-                                                    // 局部刷新列表的对应一项
-                                                    XLog.d(TAG, "下载secret成功.id=" + secret.sid);
-                                                    secret.completeSize = -1;
-                                                    mSecretAdapter.refreshData(secret, null);
-                                                }
-                                            }
-                                        });
                             }
                         }
                     }
-                });
+                }));
         return true;
     }
 
     public void addSecret(final List<Secret> secrets) {
         notifyLoading(true);
         // 先在服务器端创建secret
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.addSecret(mMemory.mid, secrets),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onCancelled() {
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         notifyLoading(false);
@@ -411,32 +443,14 @@ public class MemoryDetailFragment extends XFragment {
                                 .getSource(MyApplication.SOURCE_SECRET);
                         source.addAll(secrets);
                         mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                        notifyRefresh(REFRESH_MENU, null);
+                        notifyRefresh(REFRESH_DATA, null);
                         mSecretAdapter.addData(secrets);
                         // 再上传图片文件
                         for (Secret secret : secrets) {
-                            MyApplication.getSecretUploader().upload(secret,
-                                    new ProgressListener<Secret>() {
-                                        @Override
-                                        public void onProgress(Secret secret,
-                                                               long completeSize,
-                                                               long totalSize) {
-                                            mSecretAdapter.refreshData(secret, new Object());
-                                        }
-
-                                        @Override
-                                        public void onResult(boolean result, Secret secret) {
-                                            if (!result) {
-                                                Toast.makeText(getActivity(),
-                                                        "上传Secret失败!", Toast.LENGTH_SHORT).show();
-                                            }
-                                            secret.completeSize = -1;
-                                            mSecretAdapter.refreshData(secret, null);
-                                        }
-                                    });
+                            MyApplication.getSecretUploader().upload(secret);
                         }
                     }
-                });
+                }));
     }
 
     private boolean deleteSecret(final Secret secret) {
@@ -445,9 +459,15 @@ public class MemoryDetailFragment extends XFragment {
             return false;
         }
         mWaiting = true;
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.deleteSecret(mMemory.mid, secret.sid),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        mSecretAdapter.refreshData(secret, null);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         XLog.d(TAG, "deleteSecret onNetworkError()! sid=" + secret.sid);
@@ -473,7 +493,7 @@ public class MemoryDetailFragment extends XFragment {
                                 getInstance().getSource(MyApplication.SOURCE_SECRET);
                         source.deleteById(secret.getId());
                         mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                        notifyRefresh(REFRESH_MENU, null);
+                        notifyRefresh(REFRESH_DATA, null);
                         // 删除本地缓存文件
                         if (!XStringUtil.isEmpty(secret.localPath)) {
                             File cacheFile = new File(secret.localPath);
@@ -485,16 +505,20 @@ public class MemoryDetailFragment extends XFragment {
                         mSecretAdapter.deleteData(secret);
                     }
                 }
-        );
+        ));
         return true;
     }
 
     private void reorderSecret() {
         if (!mReorder)
             return;
+        // 此异步请求实在onDestroyView()最后执行，因此不需要再Fragment退出时终止
         MyApplication.getAsyncHttp().execute(
                 ApiUtil.orderSecret(mMemory.mid, mMemory.secrets),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {}
+
                     @Override
                     public void onNetworkError() {
                         XLog.d(TAG, "reorderSecret onNetworkError()! mid=" + mMemory.mid);
@@ -516,13 +540,13 @@ public class MemoryDetailFragment extends XFragment {
 
     private class SecretAdapter extends XListAdapter<Secret> {
         public SecretAdapter(List<Secret> items) {
-            super(R.layout.item_edit_secret, items);
+            super(R.layout.item_memory_secret, items);
         }
 
         @Override
         public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             return new XViewHolder(LayoutInflater.from(getActivity())
-                    .inflate(R.layout.item_edit_secret, parent, false));
+                    .inflate(R.layout.item_memory_secret, parent, false));
         }
 
         @Override
@@ -550,7 +574,7 @@ public class MemoryDetailFragment extends XFragment {
             XLog.d(TAG, "onBindViewHolder()");
             final Secret item = getData().get(position);
             holder.bindData(item);
-            // set image
+            // set layout
             View imageLayout = holder.getView(R.id.secret_item_img_layout);
             int imageViewWidth = mScreenWidth;
             int imageViewHeight = imageViewWidth  * item.height / item.width;
@@ -566,6 +590,7 @@ public class MemoryDetailFragment extends XFragment {
                 Glide.with(MemoryDetailFragment.this)
                         .load(item.localPath)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .placeholder(R.color.darkGray)
                         .error(R.color.darkGray)
                         .into(imageView);
             }

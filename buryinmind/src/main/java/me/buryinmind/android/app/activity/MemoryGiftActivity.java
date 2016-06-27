@@ -1,67 +1,56 @@
 package me.buryinmind.android.app.activity;
 
-import android.content.Context;
+import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.Priority;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
-import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
-import me.buryinmind.android.app.controller.ProgressListener;
-import me.buryinmind.android.app.data.SecretSource;
+import me.buryinmind.android.app.fragment.MemoryGiftFragment;
+import me.buryinmind.android.app.fragment.PostMemoryFragment;
+import me.buryinmind.android.app.fragment.SearchFriendsFragment;
+import me.buryinmind.android.app.fragment.XBaseFragmentListener;
 import me.buryinmind.android.app.model.Memory;
-import me.buryinmind.android.app.model.MemoryGift;
-import me.buryinmind.android.app.model.Secret;
-import me.buryinmind.android.app.util.ApiUtil;
-import me.buryinmind.android.app.util.TimeUtil;
+import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ViewUtil;
-import se.emilsjolander.flipview.FlipView;
 
 
 /**
  * Created by jasontujun on 2016/6/24.
  */
-public class MemoryGiftActivity extends AppCompatActivity {
+public class MemoryGiftActivity extends XActivity {
 
     private static final String TAG = MemoryGiftActivity.class.getSimpleName();
 
+    private MemoryGiftFragment mGiftFragment;
+    private SearchFriendsFragment mFriendsFragment;
+    private PostMemoryFragment mPostFragment;
+
     private View mProgressView;
-    private Toolbar mToolBar;
+    private View mContentLayout;
+    private View mToolBarStubLayout;
+    private View mToolBarLayout;
     private TextView mToolBarTitle;
-    private FlipView mSecretFlip;
-    private FlipAdapter mAdapter;
+    private Toolbar mToolBar;
+    private MenuItem mPostBtn;
+    private MenuItem mDoneBtn;
 
     private Memory mMemory;
-    private boolean mWaiting;
+    private boolean mShowToolBar;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -84,22 +73,44 @@ public class MemoryGiftActivity extends AppCompatActivity {
         }
 
         mProgressView = findViewById(R.id.loading_progress);
+        mContentLayout = findViewById(R.id.content_layout);
+        mToolBarStubLayout = findViewById(R.id.toolbar_stub_layout);
+        mToolBarLayout = findViewById(R.id.toolbar_layout);
         mToolBar = (Toolbar) findViewById(R.id.toolbar);
         mToolBarTitle = (TextView) findViewById(R.id.toolbar_title);
-        mSecretFlip = (FlipView) findViewById(R.id.secret_flip);
-
 
         // init toolbar
+        mShowToolBar = true;
         mToolBar.setTitle("");
         mToolBarTitle.setText(mMemory.name);
         setSupportActionBar(mToolBar);
 
-        // init List
-        mAdapter = new FlipAdapter(this);
-        mAdapter.setData(mMemory.secrets);
-        mSecretFlip.setAdapter(mAdapter);
+        // 为了先执行onCreateOptionsMenu(),所以延迟添加Fragment
+        mContentLayout.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (mGiftFragment == null) {
+                    mGiftFragment = (MemoryGiftFragment) createSecretsFragment();
+                }
+                getFragmentManager().beginTransaction()
+                        .add(R.id.content_layout, mGiftFragment)
+                        .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                        .commit();
+            }
+        }, 50);
+    }
 
-        requestDetail();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_memory, menu);
+        MenuItem mAddBtn = menu.getItem(0);
+        mPostBtn = menu.getItem(1);
+        mDoneBtn = menu.getItem(2);
+        mAddBtn.setVisible(false);
+        mPostBtn.setVisible(false);
+        mDoneBtn.setVisible(false);
+        return true;
     }
 
     @Override
@@ -108,18 +119,14 @@ public class MemoryGiftActivity extends AppCompatActivity {
             case android.R.id.home:
                 onBackPressed();
                 return true;
+            case  R.id.action_post:
+                goToNext(SearchFriendsFragment.class, null);
+                return true;
+            case R.id.action_done:
+                mPostFragment.confirm();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        XLog.d(TAG, "onBackPressed()");
-        if (getFragmentManager().getBackStackEntryCount() > 0) {
-            getFragmentManager().popBackStack();
-        } else {
-            supportFinishAfterTransition();
         }
     }
 
@@ -127,238 +134,172 @@ public class MemoryGiftActivity extends AppCompatActivity {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         XLog.d(TAG, "onConfigurationChanged()");
-        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            // land do nothing is ok
-            mAdapter.relayout();
-        } else if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-            // port do nothing is ok
-            mAdapter.relayout();
-        }
     }
 
     private void showProgress(boolean show) {
-        ViewUtil.animateFadeInOut(mSecretFlip, show);
+        ViewUtil.animateFadeInOut(mContentLayout, show);
         ViewUtil.animateFadeInOut(mProgressView, !show);
     }
 
-    private boolean requestDetail() {
-        if (mWaiting)
-            return false;
-        mWaiting = true;
-        showProgress(true);
-        MyApplication.getAsyncHttp().execute(
-                ApiUtil.getMemoryDetail(mMemory.mid),
-                new XJsonObjectHandler(),
-                new XAsyncHttp.Listener<JSONObject>() {
-                    @Override
-                    public void onNetworkError() {
-                        mWaiting = false;
-                        showProgress(false);
-                        Toast.makeText(MemoryGiftActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
-                    }
+    private void refreshMenu() {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        if (current == null) {
+            return;
+        }
+        if (current instanceof MemoryGiftFragment) {
+            if (mMemory.secrets.size() > 0) {
+                mPostBtn.setVisible(true);
+            } else {
+                mPostBtn.setVisible(false);
+            }
+            mDoneBtn.setVisible(false);
+        } else if (current instanceof SearchFriendsFragment) {
+            mPostBtn.setVisible(false);
+            mDoneBtn.setVisible(false);
+        } else if (current instanceof PostMemoryFragment) {
+            mPostBtn.setVisible(false);
+            mDoneBtn.setVisible(true);
+        }
+    }
 
-                    @Override
-                    public void onFinishError(XHttpResponse xHttpResponse) {
-                        mWaiting = false;
-                        showProgress(false);
-                        Toast.makeText(MemoryGiftActivity.this, R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
-                        mWaiting = false;
-                        showProgress(false);
-                        List<Secret> secrets = null;
-                        if (jo.has("secrets") && !jo.isNull("secrets")) {
-                            try {
-                                JSONArray secretArr = jo.getJSONArray("secrets");
-                                secrets = Secret.fromJson(secretArr);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        XLog.d(TAG, "详情，secrets:" + (secrets == null ? 0 : secrets.size()));
-                        if (secrets != null && secrets.size() > 0) {
-                            SecretSource source = (SecretSource) XDefaultDataRepo.getInstance()
-                                    .getSource(MyApplication.SOURCE_SECRET);
-                            source.addAll(secrets);
-                            mMemory.secrets = source.getByMemoryId(mMemory.mid);
-                            mAdapter.setData(mMemory.secrets);
-                            // 刷新列表
-                            for (Secret secret : mMemory.secrets) {
-                                // Secret文件已下载，直接显示
-                                if (!XStringUtil.isEmpty(secret.localPath)) {
-                                    File file = new File(secret.localPath);
-                                    if (file.exists() && file.length() == secret.size) {
-                                        mAdapter.notifyDataSetChanged();
-                                        continue;
-                                    }
-                                }
-                                // 否则，重新下载
-                                MyApplication.getSecretDownloader().download(secret,
-                                        new ProgressListener<Secret>() {
-                                            @Override
-                                            public void onProgress(Secret secret,
-                                                                   long completeSize,
-                                                                   long totalSize) {
-                                                mAdapter.notifyDataSetChanged();
-                                            }
-
-                                            @Override
-                                            public void onResult(boolean result, Secret secret) {
-                                                if (result) {
-                                                    // 本地缓存文件路径，同步到数据库
-                                                    SecretSource source = (SecretSource) XDefaultDataRepo.getInstance()
-                                                            .getSource(MyApplication.SOURCE_SECRET);
-                                                    source.saveToDatabase(secret);
-                                                    // 局部刷新列表的对应一项
-                                                    XLog.d(TAG, "下载secret成功.id=" + secret.sid);
-                                                    secret.completeSize = -1;
-                                                    mAdapter.notifyDataSetChanged();
-                                                }
-                                            }
-                                        });
-                            }
-                        }
-                    }
-                });
-        return true;
+    private void goToNext(Class<?> clazz, Object data) {
+        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        if (current == null)
+            return;
+        if (current instanceof MemoryGiftFragment &&
+                clazz == SearchFriendsFragment.class) {
+            if (mFriendsFragment == null) {
+                mFriendsFragment = createFriendsFragment();
+            }
+            getFragmentManager().beginTransaction()
+                    .replace(R.id.content_layout, mFriendsFragment)
+                    .addToBackStack(null)
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .commit();
+        } else if (current instanceof SearchFriendsFragment &&
+                clazz == PostMemoryFragment.class) {
+            User user = (User) data;
+            if (mPostFragment == null) {
+                mPostFragment = createPostFragment(user);
+            } else {
+                mPostFragment.getArguments().putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
+            }
+            getFragmentManager().beginTransaction()
+                    .replace(R.id.content_layout, mPostFragment)
+                    .addToBackStack(null)
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .commit();
+        }
     }
 
 
-    public class FlipAdapter extends BaseAdapter {
-
-        private static final int ITEM_COVER = 0;
-        private static final int ITEM_SECRET = 1;
-
-        private LayoutInflater inflater;
-        private List<Secret> items = new ArrayList<Secret>();
-        private List<ViewHolder> holders = new ArrayList<ViewHolder>();
-
-        public FlipAdapter(Context context) {
-            inflater = LayoutInflater.from(context);
-        }
-
-        public void setData(List<Secret> data) {
-            items.clear();
-            items.addAll(data);
-            notifyDataSetChanged();
-        }
-
-        public void relayout() {
-            for (ViewHolder holder : holders) {
-                holder.needReLayout = true;
+    private Fragment createSecretsFragment() {
+        final MemoryGiftFragment fragment = new MemoryGiftFragment();
+        fragment.setListener(new XBaseFragmentListener() {
+            @Override
+            public void onEnter() {
+                refreshMenu();
+                mToolBarStubLayout.setVisibility(View.GONE);
+                mToolBarTitle.setText(mMemory.name);
             }
-            notifyDataSetChanged();
-        }
 
-        @Override
-        public int getItemViewType(int position) {
-            return position == 0 ? ITEM_COVER : ITEM_SECRET;
-        }
+            @Override
+            public void onExit() {
+                mToolBarStubLayout.setVisibility(View.VISIBLE);
+            }
 
-        @Override
-        public int getViewTypeCount() {
-            return 2;
-        }
+            @Override
+            public void onLoading(boolean show) {
+                showProgress(show);
+            }
 
-        @Override
-        public Object getItem(int position) {
-            return position == 0 ? null : items.get(position - 1);
-        }
+            @Override
+            public void onRefresh(int refreshEvent, Object data) {
+                switch (refreshEvent) {
+                    case MemoryGiftFragment.REFRESH_UP:
+                        showToolBar();
+                        break;
+                    case MemoryGiftFragment.REFRESH_DOWN:
+                        hideToolBar();
+                        break;
+                    case MemoryGiftFragment.REFRESH_DATA:
+                        refreshMenu();
+                        break;
+                }
+            }
+        });
+        Bundle arguments = new Bundle();
+        arguments.putString(MemoryGiftFragment.KEY_MID, mMemory.mid);
+        fragment.setArguments(arguments);
+        return fragment;
+    }
 
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public int getCount() {
-            return items.size() + 1;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            ViewHolder holder;
-            if (getItemViewType(position) == ITEM_COVER) {
-                if (convertView == null) {
-                    XLog.d(TAG, "getView().convertView == null.position=" + position);
-                    holder = new ViewHolder();
-                    convertView = inflater.inflate(R.layout.item_gift_cover, parent, false);
-                    holder.mImageView = (ImageView) convertView.findViewById(R.id.memory_cover_view);
-                    holder.mHeadView = (ImageView) convertView.findViewById(R.id.memory_author_head_img);
-                    holder.mNameView = (TextView) convertView.findViewById(R.id.memory_name_txt);
-                    holder.mAuthorNameView = (TextView) convertView.findViewById(R.id.memory_author_name_txt);
-                    holder.mDateView = (TextView) convertView.findViewById(R.id.memory_time_view);
-                    convertView.setTag(holder);
-                    if (!holders.contains(holder)) {
-                        holders.add(holder);
+    private SearchFriendsFragment createFriendsFragment() {
+        SearchFriendsFragment fragment = new SearchFriendsFragment();
+        fragment.setListener(
+                new XBaseFragmentListener() {
+                    @Override
+                    public void onEnter() {
+                        refreshMenu();
                     }
-                } else {
-                    holder = (ViewHolder) convertView.getTag();
-                    if (holder.needReLayout) {
-                        XLog.d(TAG, "getView().convertView needReLayout.position=" + position);
-                        convertView = inflater.inflate(R.layout.item_gift_cover, parent, false);
-                        holder.mImageView = (ImageView) convertView.findViewById(R.id.memory_cover_view);
-                        holder.mHeadView = (ImageView) convertView.findViewById(R.id.memory_author_head_img);
-                        holder.mNameView = (TextView) convertView.findViewById(R.id.memory_name_txt);
-                        holder.mAuthorNameView = (TextView) convertView.findViewById(R.id.memory_author_name_txt);
-                        holder.mDateView = (TextView) convertView.findViewById(R.id.memory_time_view);
-                        holder.needReLayout = false;
-                        convertView.setTag(holder);
-                        if (!holders.contains(holder)) {
-                            holders.add(holder);
+
+                    @Override
+                    public void onFinish(boolean result, Object data) {
+                        if (result) {
+                            goToNext(PostMemoryFragment.class, data);
                         }
-                    } else {
-                        XLog.d(TAG, "getView().convertView != null.position=" + position);
                     }
-                }
-                if (XStringUtil.isEmpty(mMemory.coverUrl)) {
-                    holder.mImageView.setImageResource(R.color.darkGray);
-                } else {
-                    Glide.with(MemoryGiftActivity.this)
-                            .load(mMemory.coverUrl)
-                            .diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .priority(Priority.HIGH)
-                            .error(R.color.darkGray)
-                            .into(holder.mImageView);
-                }
-                Glide.with(MemoryGiftActivity.this)
-                        .load(ApiUtil.getIdUrl(mMemory.authorId))
-                        .dontAnimate()
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .error(R.drawable.headicon_default)
-                        .into(holder.mHeadView);
-                holder.mNameView.setText(mMemory.name);
-                holder.mAuthorNameView.setText(mMemory.authorName);
-                holder.mDateView.setText(String.format(getResources().getString(R.string.info_memory_time),
-                        XStringUtil.calendar2str(TimeUtil.getCalendar(mMemory.happenStartTime), ".")));
-            } else {
-                if (convertView == null) {
-                    holder = new ViewHolder();
-                    convertView = inflater.inflate(R.layout.item_gift_secret, parent, false);
-                    holder.mImageView = (ImageView) convertView.findViewById(R.id.secret_item_img);
-                    convertView.setTag(holder);
-                } else {
-                    holder = (ViewHolder) convertView.getTag();
-                }
-                final Secret item = (Secret) getItem(position);
-                Glide.with(MemoryGiftActivity.this)
-                        .load(item.localPath)
-                        .error(R.drawable.profile_default)
-                        .into(holder.mImageView);
+                });
+        return fragment;
+    }
+
+    private PostMemoryFragment createPostFragment(User user) {
+        PostMemoryFragment fragment = new PostMemoryFragment();
+        fragment.setListener(new XBaseFragmentListener() {
+
+            @Override
+            public void onEnter() {
+                refreshMenu();
             }
-            return convertView;
-        }
 
-        private class ViewHolder {
-            ImageView mImageView;
-            ImageView mHeadView;
-            TextView mNameView;
-            TextView mAuthorNameView;
-            TextView mDateView;
-            boolean needReLayout = false;
-        }
+            @Override
+            public void onLoading(boolean show) {
+                showProgress(show);
+            }
 
+            @Override
+            public void onFinish(boolean result, Object data) {
+                if (result) {
+                    // 发送成功,重新进入Memory详情界面
+                    Intent intent = new Intent(MemoryGiftActivity.this, MemoryGiftActivity.class);
+                    intent.putExtra("mid", mMemory.mid);
+                    startActivity(intent);
+                    finish();
+                }
+            }
+        });
+        Bundle arguments = new Bundle();
+        arguments.putString(PostMemoryFragment.KEY_MID, mMemory.mid);
+        arguments.putSerializable(PostMemoryFragment.KEY_RECEIVER, user);
+        fragment.setArguments(arguments);
+        return fragment;
+    }
+
+
+
+    public void hideToolBar() {
+        if (mShowToolBar) {
+            mShowToolBar = false;
+            mToolBarLayout.animate().translationY(-mToolBarLayout.getHeight())
+                    .setInterpolator(new AccelerateDecelerateInterpolator());
+        }
+    }
+
+    public void showToolBar() {
+        if (!mShowToolBar) {
+            mShowToolBar = true;
+            mToolBarLayout.animate().translationY(0)
+                    .setInterpolator(new AccelerateDecelerateInterpolator());
+        }
     }
 }

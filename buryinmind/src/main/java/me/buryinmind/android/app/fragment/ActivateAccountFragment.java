@@ -14,9 +14,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -153,10 +153,16 @@ public class ActivateAccountFragment extends XFragment {
             return;
         }
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.activateUser(mGift.receiverId, mGift.gid, password2, email, mAnswer),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -194,6 +200,6 @@ public class ActivateAccountFragment extends XFragment {
                             notifyFinish(true, user);
                         }
                     }
-                });
+                }));
     }
 }

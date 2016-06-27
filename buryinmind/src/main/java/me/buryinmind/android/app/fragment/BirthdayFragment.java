@@ -6,8 +6,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 
 import org.chenglei.widget.datepicker.DatePicker;
@@ -75,9 +75,15 @@ public class BirthdayFragment extends XFragment {
             return;
         mWaiting = true;
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.updateBornTime(bornTime),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -100,6 +106,6 @@ public class BirthdayFragment extends XFragment {
                         user.bornTime = bornTime;
                         notifyFinish(true, bornTime);
                     }
-                });
+                }));
     }
 }

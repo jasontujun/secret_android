@@ -16,11 +16,11 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListFilteredIdSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.toolkit.filter.XBaseFilter;
 import com.tj.xengine.core.toolkit.filter.XFilter;
@@ -219,10 +219,16 @@ public class SearchFriendsFragment extends XFragment {
             return;
         mWaiting = true;
         showProgress(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.getFriendList(),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        showProgress(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -251,7 +257,7 @@ public class SearchFriendsFragment extends XFragment {
                             mFriendAdapter.notifyDataSetChanged();
                         }
                     }
-                });
+                }));
     }
 
     private void refreshFriendsList() {

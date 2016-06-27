@@ -3,18 +3,16 @@ package me.buryinmind.android.app.activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Pair;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -32,7 +30,6 @@ import me.buryinmind.android.app.fragment.ActivateAccountFragment;
 import me.buryinmind.android.app.fragment.AnswerAccountFragment;
 import me.buryinmind.android.app.fragment.ChooseAccountFragment;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
-import me.buryinmind.android.app.fragment.XFragmentListener;
 import me.buryinmind.android.app.fragment.LoginAccountFragment;
 import me.buryinmind.android.app.fragment.SearchAccountFragment;
 import me.buryinmind.android.app.model.MemoryGift;
@@ -44,7 +41,7 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * A login screen that offers login via email/password.
  */
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends XActivity {
 
     public static final String RE_LOGIN = "re_login";
 
@@ -132,20 +129,16 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onBackPressed() {
-        if (getFragmentManager().getBackStackEntryCount() > 0) {
-            getFragmentManager().popBackStack();
+    public boolean onBackHandle() {
+        long currentTime = System.currentTimeMillis();
+        GlobalSource source = (GlobalSource) XDefaultDataRepo
+                .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+        if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
+            return false;
         } else {
-            // 点击2次退出
-            long currentTime = System.currentTimeMillis();
-            GlobalSource source = (GlobalSource) XDefaultDataRepo
-                    .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-            if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
-                supportFinishAfterTransition();
-            } else {
-                source.setLastBackTime(currentTime);
-                Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
-            }
+            source.setLastBackTime(currentTime);
+            Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
+            return true;
         }
     }
 
@@ -180,10 +173,6 @@ public class LoginActivity extends AppCompatActivity {
                                                 .addToBackStack(null)
                                                 .commit();
                                     }
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -206,10 +195,6 @@ public class LoginActivity extends AppCompatActivity {
                                             .replace(R.id.content_layout, createFragment(STEP_LOGIN_HAS_USER))
                                             .addToBackStack(null)
                                             .commit();
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -233,10 +218,6 @@ public class LoginActivity extends AppCompatActivity {
                                 if (result) {
                                     // 进入MainActivity
                                     enterMainActivity();
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -269,12 +250,13 @@ public class LoginActivity extends AppCompatActivity {
                                     getSeedAccountDetail(chooseUser.uid,
                                             new XAsyncHttp.Listener<List<MemoryGift>>() {
                                                 @Override
-                                                public void onNetworkError() {
-                                                }
+                                                public void onCancelled() {}
 
                                                 @Override
-                                                public void onFinishError(XHttpResponse xHttpResponse) {
-                                                }
+                                                public void onNetworkError() {}
+
+                                                @Override
+                                                public void onFinishError(XHttpResponse xHttpResponse) {}
 
                                                 @Override
                                                 public void onFinishSuccess(XHttpResponse xHttpResponse, List<MemoryGift> memoryGifts) {
@@ -285,10 +267,6 @@ public class LoginActivity extends AppCompatActivity {
                                                             .commit();
                                                 }
                                             });
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -316,10 +294,6 @@ public class LoginActivity extends AppCompatActivity {
                                             .addToBackStack(null)
                                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -349,10 +323,6 @@ public class LoginActivity extends AppCompatActivity {
                                             .addToBackStack(null)
                                             .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                                             .commit();
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -385,10 +355,6 @@ public class LoginActivity extends AppCompatActivity {
                                         // 进入MainActivity
                                         enterMainActivity();
                                     }
-                                } else {
-                                    if (getFragmentManager().getBackStackEntryCount() > 0) {
-                                        getFragmentManager().popBackStack();
-                                    }
                                 }
                             }
                         });
@@ -413,10 +379,13 @@ public class LoginActivity extends AppCompatActivity {
             return;
         mWaiting = true;
         showProgress(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.checkToken(userId, token),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {}
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -460,7 +429,7 @@ public class LoginActivity extends AppCompatActivity {
                             enterMainActivity();
                         }
                     }
-                });
+                }));
     }
 
     private void getSeedAccountDetail(String userId, final XAsyncHttp.Listener<List<MemoryGift>> listener) {
@@ -468,10 +437,16 @@ public class LoginActivity extends AppCompatActivity {
             return;
         mWaiting = true;
         showProgress(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.getSeedUserDetail(userId),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onCancelled() {
+                        if (listener != null)
+                            listener.onCancelled();
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -498,7 +473,7 @@ public class LoginActivity extends AppCompatActivity {
                         if (listener != null)
                             listener.onFinishSuccess(xHttpResponse, gifts);
                     }
-                });
+                }));
     }
 
     private void enterMainActivity() {

@@ -85,5 +85,6 @@
     <string name="info_post_lock_optional">You can set a question to lock the memory</string>
     <string name="info_post_lock_required">Because of undefined receiver, you have to add a question
         to lock the memory to avoid being received in error by strangers</string>
+    <string name="info_post_uneditable">Once post out, the memory will be uneditable, sure to post?</string>
 
 </resources>

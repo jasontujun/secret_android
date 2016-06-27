@@ -16,7 +16,7 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.tj.xengine.core.network.http.XAsyncHttp;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -116,9 +116,15 @@ public class AnswerAccountFragment extends XFragment {
             return;
         }
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.answerActivateQuestion(mGift.receiverId, mGift.gid, answer),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -138,6 +144,6 @@ public class AnswerAccountFragment extends XFragment {
                         mWaiting = false;
                         notifyFinish(true, answer);
                     }
-                });
+                }));
     }
 }

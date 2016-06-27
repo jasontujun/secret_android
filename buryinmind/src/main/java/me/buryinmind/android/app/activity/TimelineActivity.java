@@ -21,10 +21,10 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -44,7 +44,7 @@ import me.buryinmind.android.app.util.FileUtils;
 import me.buryinmind.android.app.util.ImageUtil;
 import me.buryinmind.android.app.util.ViewUtil;
 
-public class TimelineActivity extends AppCompatActivity {
+public class TimelineActivity extends XActivity {
 
     private static final String TAG = TimelineActivity.class.getSimpleName();
 
@@ -217,21 +217,17 @@ public class TimelineActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onBackPressed() {
-        if (getFragmentManager().getBackStackEntryCount() > 0) {
-            showProgress(false);
-            getFragmentManager().popBackStack();
+    public boolean onBackHandle() {
+        // 点击2次退出
+        long currentTime = System.currentTimeMillis();
+        GlobalSource source = (GlobalSource) XDefaultDataRepo
+                .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
+        if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
+            return false;
         } else {
-            // 点击2次退出
-            long currentTime = System.currentTimeMillis();
-            GlobalSource source = (GlobalSource) XDefaultDataRepo
-                    .getInstance().getSource(MyApplication.SOURCE_GLOBAL);
-            if (currentTime - source.getLastBackTime() <= GlobalSource.PRESS_BACK_INTERVAL) {
-                supportFinishAfterTransition();
-            } else {
-                source.setLastBackTime(currentTime);
-                Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
-            }
+            source.setLastBackTime(currentTime);
+            Toast.makeText(this, R.string.info_press_back_again, Toast.LENGTH_SHORT).show();
+            return true;
         }
     }
 
@@ -331,6 +327,9 @@ public class TimelineActivity extends AppCompatActivity {
                 ApiUtil.logoutUser(),
                 new XAsyncHttp.Listener() {
                     @Override
+                    public void onCancelled() {}
+
+                    @Override
                     public void onNetworkError() {
                         Toast.makeText(TimelineActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
@@ -423,11 +422,13 @@ public class TimelineActivity extends AppCompatActivity {
                 @Override
                 public void onFinish(boolean result, Object data) {
                     showProgress(false);
-                    if (current == null) {
-                        goToNext(TimelineFragment.class);
-                    } else {
-                        // 模拟返回按钮
-                        onBackPressed();
+                    if (result) {
+                        if (current == null) {
+                            goToNext(TimelineFragment.class);
+                        } else {
+                            // 模拟返回按钮
+                            onBackPressed();
+                        }
                     }
                 }
             });
@@ -470,9 +471,9 @@ public class TimelineActivity extends AppCompatActivity {
                                     final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
                                             .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
                                     mAccountDesView.setText(XStringUtil.list2String(user.descriptions, ", "));
+                                    // 模拟返回按钮
+                                    onBackPressed();
                                 }
-                                // 模拟返回按钮
-                                onBackPressed();
                             }
                         });
             }
@@ -526,9 +527,9 @@ public class TimelineActivity extends AppCompatActivity {
                                         XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
                                 source.add(memory);
                                 source.sort(Memory.comparator);
+                                // 模拟返回按钮
+                                onBackPressed();
                             }
-                            // 模拟返回按钮
-                            onBackPressed();
                         }
                     });
             getFragmentManager().beginTransaction()

@@ -17,21 +17,14 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.fourmob.datetimepicker.date.DatePickerDialog;
-import com.qiniu.android.http.ResponseInfo;
-import com.qiniu.android.storage.UpCompletionHandler;
-import com.qiniu.android.storage.UpProgressHandler;
-import com.qiniu.android.storage.UploadOptions;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.File;
 import java.util.Calendar;
 
 import me.buryinmind.android.app.MyApplication;
@@ -235,13 +228,19 @@ public class MemoryAddFragment extends XFragment {
         }
     }
 
-    private static void addMemory(final Context context, String memoryName,
+    private void addMemory(final Context context, String memoryName,
                                   long happenStartTime, long happenEndTime,
                                   final ResultListener<Memory> listener) {
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.addMemory(memoryName, happenStartTime, happenEndTime),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {
+                        if (listener != null)
+                            listener.onResult(false, null);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         Toast.makeText(context, R.string.error_network, Toast.LENGTH_SHORT).show();
@@ -263,7 +262,7 @@ public class MemoryAddFragment extends XFragment {
                             listener.onResult(memory != null, memory);
                     }
                 }
-        );
+        ));
     }
 
     private void addAndUploadMemory() {
@@ -305,10 +304,16 @@ public class MemoryAddFragment extends XFragment {
                                             // 上传成功，回调服务器
                                             final String url = ApiUtil.PUBLIC_DOMAIN + "/" + key;
                                             final int[] dimension = ImageUtil.getDimension(mLocalCoverPath);
-                                            MyApplication.getAsyncHttp().execute(
+                                            putAsyncTask(MyApplication.getAsyncHttp().execute(
                                                     ApiUtil.updateMemoryCover(memory.mid,
                                                             url, dimension[0], dimension[1]),
                                                     new XAsyncHttp.Listener() {
+                                                        @Override
+                                                        public void onCancelled() {
+                                                            mWaiting = false;
+                                                            notifyLoading(false);
+                                                        }
+
                                                         @Override
                                                         public void onNetworkError() {
                                                             // 尽管回调失败，但Memory还是添加成功了！让用户下次再设置封面
@@ -335,7 +340,7 @@ public class MemoryAddFragment extends XFragment {
                                                             memory.coverHeight = dimension[1];
                                                             notifyFinish(true, memory);
                                                         }
-                                                    });
+                                                    }));
                                         } else {
                                             // 尽管图片上传失败，但Memory还是添加成功了！让用户下次再设置封面
                                             mWaiting = false;

@@ -16,11 +16,11 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.daimajia.swipe.SimpleSwipeListener;
 import com.daimajia.swipe.SwipeLayout;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -29,6 +29,8 @@ import org.json.JSONObject;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.dialog.ConfirmDialog;
+import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.model.Memory;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.util.ApiUtil;
@@ -49,7 +51,6 @@ public class PostMemoryFragment extends XFragment {
     private String mQuestion;
     private String mAnswer;
 
-    private View mProgressView;
     private SwipeLayout mSwipeLayout;
     private TextView mLockPromptView;
     private EditText mQuestionInputView;
@@ -79,7 +80,6 @@ public class PostMemoryFragment extends XFragment {
                              Bundle savedInstanceState) {
         XLog.d(TAG, "onCreateView()");
         View rootView = inflater.inflate(R.layout.fragment_post_memory, container, false);
-        mProgressView = rootView.findViewById(R.id.loading_progress);
         mLockPromptView = (TextView) rootView.findViewById(R.id.lock_prompt_txt);
         mQuestionInputView = (EditText) rootView.findViewById(R.id.question_input);
         mAnswerInputView = (EditText) rootView.findViewById(R.id.answer_input);
@@ -198,13 +198,26 @@ public class PostMemoryFragment extends XFragment {
             ViewUtil.animationShake(mLockBtn);
             return;
         }
-        // TODO 弹出确认对话框
-        postMemory();
-    }
+        // 弹出确认对话框
+        ConfirmDialog.newInstance(
+                getResources().getString(R.string.info_post_uneditable),
+                new DialogListener() {
+                    boolean confirm = false;
 
-    private void showProgress(boolean show) {
-        ViewUtil.animateFadeInOut(mSwipeLayout, show);
-        ViewUtil.animateFadeInOut(mProgressView, !show);
+                    @Override
+                    public void onDone(Object... result) {
+                        confirm = (boolean) result[0];
+                        if (confirm) {
+                            postMemory();
+                        }
+                    }
+
+                    @Override
+                    public void onDismiss() {
+                        if (!confirm) {
+                        }
+                    }
+                }).show(getFragmentManager(), ConfirmDialog.TAG);
     }
 
     private void lockerTip() {
@@ -220,8 +233,8 @@ public class PostMemoryFragment extends XFragment {
         if (mWaiting)
             return;
         mWaiting = true;
-        showProgress(true);
-        MyApplication.getAsyncHttp().execute(
+        notifyLoading(true);
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.postMemory(mMemory.mid, mReceiver.uid,
                         mReceiver.name, mReceiver.descriptions,
                         mQuestion, mAnswer,
@@ -231,23 +244,29 @@ public class PostMemoryFragment extends XFragment {
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
                     @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
+                    @Override
                     public void onNetworkError() {
                         mWaiting = false;
-                        showProgress(false);
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         mWaiting = false;
-                        showProgress(false);
+                        notifyLoading(false);
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
                         mWaiting = false;
-                        showProgress(false);
+                        notifyLoading(false);
                         String gid = null;
                         try {
                             gid = jo.getString("gid");
@@ -258,6 +277,6 @@ public class PostMemoryFragment extends XFragment {
                         }
                         notifyFinish(true, gid);
                     }
-                });
+                }));
     }
 }

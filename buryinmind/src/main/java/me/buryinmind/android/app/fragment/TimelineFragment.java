@@ -21,12 +21,12 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.daimajia.swipe.SimpleSwipeListener;
 import com.daimajia.swipe.SwipeLayout;
 import com.tj.xengine.android.data.listener.XHandlerIdDataSourceListener;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -161,10 +161,16 @@ public class TimelineFragment extends XFragment {
             return;
         mWaiting = true;
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.getMemoryList(),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -191,26 +197,24 @@ public class TimelineFragment extends XFragment {
                         // 获取待接收列表
                         getMemoryGift();
                     }
-                });
+                }));
     }
 
     private void deleteMemory(final Memory memory) {
-        if (mWaiting)
-            return;
-        mWaiting = true;
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.deleteMemory(memory.mid),
                 new XAsyncHttp.Listener() {
                     @Override
+                    public void onCancelled() {}
+
+                    @Override
                     public void onNetworkError() {
-                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
-                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
@@ -218,18 +222,20 @@ public class TimelineFragment extends XFragment {
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, Object obj) {
                         XLog.d(TAG, "deleteMemory onFinishSuccess()! mid=" + memory.mid);
-                        mWaiting = false;
                         mMemorySource.deleteById(memory.mid);
                     }
                 }
-        );
+        ));
     }
 
     private void getMemoryGift() {
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.inMemory(),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {}
+
                     @Override
                     public void onNetworkError() {
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
@@ -268,24 +274,30 @@ public class TimelineFragment extends XFragment {
                             mMemorySource.sort(Memory.comparator);
                         }
                     }
-                });
+                }));
     }
 
     private void receiveMemory(final Memory memory, String gid, String answer, final Runnable postExecutor) {
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.receiveMemory(gid, answer),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
+                    @Override
+                    public void onCancelled() {
+                    }
+
                     @Override
                     public void onNetworkError() {
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
+
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
+
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
                         try {
@@ -303,13 +315,16 @@ public class TimelineFragment extends XFragment {
                             e.printStackTrace();
                         }
                     }
-                });
+                }));
     }
 
     private void rejectMemory(final Memory memory, String gid) {
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.rejectMemory(gid),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {}
+
                     @Override
                     public void onNetworkError() {
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
@@ -327,7 +342,15 @@ public class TimelineFragment extends XFragment {
                         mAdapter.removeLoadingItem(memory);
                         mMemorySource.deleteById(memory.mid);
                     }
-                });
+                }));
+    }
+
+    private void gotoDetail(Memory memory) {
+        Intent intent = memory.editable ?
+                new Intent(getActivity(), MemoryDetailActivity.class) :
+                new Intent(getActivity(), MemoryGiftActivity.class);
+        intent.putExtra("mid", memory.mid);
+        startActivity(intent);
     }
 
     public boolean isScrollToTop() {
@@ -611,9 +634,7 @@ public class TimelineFragment extends XFragment {
                                 new View.OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
-                                        Intent intent = new Intent(getActivity(), MemoryGiftActivity.class);
-                                        intent.putExtra("mid", item.mid);
-                                        startActivity(intent);
+                                        gotoDetail(item);
                                     }
                                 });
                     }
@@ -635,10 +656,7 @@ public class TimelineFragment extends XFragment {
                                                     new Runnable() {
                                                         @Override
                                                         public void run() {
-                                                            Intent intent = new Intent(getActivity(),
-                                                                    MemoryDetailActivity.class);
-                                                            intent.putExtra("mid", item.mid);
-                                                            startActivity(intent);
+                                                            gotoDetail(item);
                                                         }
                                                     });
                                         }

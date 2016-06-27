@@ -12,9 +12,9 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -94,11 +94,17 @@ public class SearchAccountFragment extends XFragment {
                 .hideSoftInputFromWindow(mAccountInputView.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         mAccountInputView.clearFocus();
         notifyLoading(true);
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 isRegister ? ApiUtil.searchSeedUser(name, null)
                         : ApiUtil.searchActiveUser(name, null),
                 new XJsonArrayHandler(),
                 new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onCancelled() {
+                        mWaiting = false;
+                        notifyLoading(false);
+                    }
+
                     @Override
                     public void onNetworkError() {
                         mWaiting = false;
@@ -120,6 +126,6 @@ public class SearchAccountFragment extends XFragment {
                         Pair<Boolean, List<User>> data = new Pair<Boolean, List<User>>(isRegister, users);
                         notifyFinish(true, data);
                     }
-                });
+                }));
     }
 }

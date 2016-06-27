@@ -22,7 +22,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import me.buryinmind.android.app.model.Secret;
@@ -54,13 +56,13 @@ public class SecretImageDownloader {
     private static final int MSG_PROGRESS = 3;
 
     private XBaseHttpDownloader mDownloader;
-    private String mSaveFolder;
+    private String mSaveFolder;// 下载的文件夹
     private Map<String, Secret> mSecrets;
-    private Map<String, ProgressListener<Secret>> mListener;
+    private List<ProgressListener<Secret>> mListener;
 
     public SecretImageDownloader(XHttp httpClient, String folder) {
         mSecrets = new HashMap<String, Secret>();
-        mListener = new HashMap<String, ProgressListener<Secret>>();
+        mListener = new ArrayList<ProgressListener<Secret>>();
         mSaveFolder = folder;
         mDownloader = new SecretImageDownloadMgr(httpClient);
         mDownloader.registerListener(new InnerListener(
@@ -70,22 +72,25 @@ public class SecretImageDownloader {
                             public boolean handleMessage(Message msg) {
                                 String sid = (String) msg.obj;
                                 Secret secret = mSecrets.get(sid);
-                                ProgressListener<Secret> listener = mListener.get(sid);
                                 switch (msg.what) {
                                     case MSG_PROGRESS:
                                         secret.completeSize = msg.arg1;
-                                        listener.onProgress(secret,
-                                                secret.completeSize, secret.size);
+                                        for (ProgressListener<Secret> listener : mListener) {
+                                            listener.onProgress(secret, secret.completeSize, secret.size);
+                                        }
                                         break;
                                     case MSG_FINISH:
+                                        secret.completeSize = -1;
                                         mSecrets.remove(sid);
-                                        mListener.remove(sid);
-                                        listener.onResult(true, secret);
+                                        for (ProgressListener<Secret> listener : mListener) {
+                                            listener.onResult(true, secret);
+                                        }
                                         break;
                                     case MSG_ERROR:
                                         mSecrets.remove(sid);
-                                        mListener.remove(sid);
-                                        listener.onResult(false, secret);
+                                        for (ProgressListener<Secret> listener : mListener) {
+                                            listener.onResult(false, secret);
+                                        }
                                         break;
                                 }
                                 return true;
@@ -94,13 +99,23 @@ public class SecretImageDownloader {
     }
 
     @MainThread
-    public boolean download(Secret secret, ProgressListener<Secret> listener) {
+    public void registerListener(ProgressListener<Secret> listener) {
+        if (!mListener.contains(listener))
+            mListener.add(listener);
+    }
+
+    @MainThread
+    public void unregisterListener(ProgressListener<Secret> listener) {
+        mListener.remove(listener);
+    }
+
+    @MainThread
+    public boolean download(Secret secret) {
         SecretDownloadBean bean = new SecretDownloadBean(secret);
         bean.setFolder(mSaveFolder);
         bean.setFileName(secret.getCacheFileName());
         if (mDownloader.addTask(bean)) {
             mSecrets.put(secret.sid, secret);
-            mListener.put(secret.sid, listener);
             mDownloader.startDownload();
             return true;
         } else {

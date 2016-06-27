@@ -80,4 +80,5 @@
     <string name="info_post_new_user">“%1$s”不在？\n把TA添加进“不忘”</string>
     <string name="info_post_lock_optional">可以设定一个问题，来锁住回忆</string>
     <string name="info_post_lock_required">由于接收者并不确定，必须添加一个问题，来锁住回忆，以免被陌生人误收</string>
+    <string name="info_post_uneditable">回忆一旦寄送出去，将不能再修改，确定寄出?</string>
 </resources>

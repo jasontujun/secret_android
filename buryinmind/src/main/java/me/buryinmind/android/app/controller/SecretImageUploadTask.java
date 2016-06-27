@@ -6,10 +6,10 @@ import com.qiniu.android.storage.UpCompletionHandler;
 import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadManager;
 import com.qiniu.android.storage.UploadOptions;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.android.utils.XStorageUtil;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttp;
 import com.tj.xengine.core.network.http.XHttpRequest;
 import com.tj.xengine.core.network.http.XHttpResponse;
@@ -283,6 +283,9 @@ public class SecretImageUploadTask extends XBaseMgrTaskExecutor<SecretUploadBean
                                             ApiUtil.callbackSecretUpload(bean.secret.mid,
                                                     bean.secret.sid, key, bean.secret.dfs),
                                             new XAsyncHttp.Listener() {
+                                                @Override
+                                                public void onCancelled() {}
+
                                                 @Override
                                                 public void onNetworkError() {
                                                     XLog.d(TAG, "上传回调失败1!");

@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
@@ -23,10 +22,10 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -58,7 +57,7 @@ import me.buryinmind.android.app.util.ViewUtil;
 /**
  * Created by jasontujun on 2016/5/15.
  */
-public class MemoryDetailActivity extends AppCompatActivity {
+public class MemoryDetailActivity extends XActivity {
 
     private static final String TAG = MemoryDetailActivity.class.getSimpleName();
     private static final int SECRET_REQUEST_CODE = 9900;
@@ -68,6 +67,8 @@ public class MemoryDetailActivity extends AppCompatActivity {
     private SearchFriendsFragment mFriendsFragment;
     private PostMemoryFragment mPostFragment;
 
+    private View mProgressView;
+    private View mContentLayout;
     private CollapsingToolbarLayout mCollapsedLayout;
     private AppBarLayout mAppBar;
     private ImageView mMemoryCoverView;
@@ -108,6 +109,8 @@ public class MemoryDetailActivity extends AppCompatActivity {
             return;// error
         }
 
+        mProgressView = findViewById(R.id.loading_progress);
+        mContentLayout = findViewById(R.id.content_layout);
         mCollapsedLayout = (CollapsingToolbarLayout) findViewById(R.id.toolbar_layout);
         mToolBar = (Toolbar) findViewById(R.id.toolbar);
         mAppBar = (AppBarLayout) findViewById(R.id.app_bar);
@@ -294,10 +297,14 @@ public class MemoryDetailActivity extends AppCompatActivity {
                                         // 上传成功，回调服务器
                                         final String url = ApiUtil.PUBLIC_DOMAIN + "/" + key;
                                         final int[] dimension = ImageUtil.getDimension(path);
-                                        MyApplication.getAsyncHttp().execute(
+                                        putAsyncTask(MyApplication.getAsyncHttp().execute(
                                                 ApiUtil.updateMemoryCover(mMemory.mid,
                                                         url, dimension[0], dimension[1]),
                                                 new XAsyncHttp.Listener() {
+                                                    @Override
+                                                    public void onCancelled() {
+                                                    }
+
                                                     @Override
                                                     public void onNetworkError() {
                                                         Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
@@ -320,7 +327,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
                                                         // 刷新封面图片
                                                         refreshCover(path);
                                                     }
-                                                });
+                                                }));
                                     } else {
                                         // 上传失败
                                         Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
@@ -343,13 +350,9 @@ public class MemoryDetailActivity extends AppCompatActivity {
         return super .onTouchEvent(event);
     }
 
-    @Override
-    public void onBackPressed() {
-        if (getFragmentManager().getBackStackEntryCount() > 0) {
-            getFragmentManager().popBackStack();
-        } else {
-            supportFinishAfterTransition();
-        }
+    private void showProgress(boolean show) {
+        ViewUtil.animateFadeInOut(mContentLayout, show);
+        ViewUtil.animateFadeInOut(mProgressView, !show);
     }
 
     private void refreshMenu() {
@@ -447,6 +450,11 @@ public class MemoryDetailActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onLoading(boolean show) {
+                showProgress(show);
+            }
+
+            @Override
             public void onRefresh(int refreshEvent, Object data) {
                 switch (refreshEvent) {
                     case MemoryDetailFragment.REFRESH_COLLAPSE:
@@ -458,7 +466,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
                     case MemoryDetailFragment.REFRESH_EXPAND:
                         mAppBar.setExpanded(true, true);
                         break;
-                    case MemoryDetailFragment.REFRESH_MENU:
+                    case MemoryDetailFragment.REFRESH_DATA:
                         refreshMenu();
                         break;
                     case MemoryDetailFragment.REFRESH_OUT_GIFT:
@@ -509,10 +517,15 @@ public class MemoryDetailActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onLoading(boolean show) {
+                showProgress(show);
+            }
+
+            @Override
             public void onFinish(boolean result, Object data) {
                 if (result) {
                     // 发送成功,重新进入Memory详情界面
-                    Intent intent = new Intent(MemoryDetailActivity.this, MemoryDetailActivity.class);
+                    Intent intent = new Intent(MemoryDetailActivity.this, MemoryGiftActivity.class);
                     intent.putExtra("mid", mMemory.mid);
                     startActivity(intent);
                     finish();
@@ -531,9 +544,13 @@ public class MemoryDetailActivity extends AppCompatActivity {
             return;
         }
         mWaiting = true;
-        MyApplication.getAsyncHttp().execute(
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.cancelMemory(gift.gid),
                 new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {
+                    }
+
                     @Override
                     public void onNetworkError() {
                         Toast.makeText(MemoryDetailActivity.this, R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
@@ -552,7 +569,7 @@ public class MemoryDetailActivity extends AppCompatActivity {
                         mMemory.outGifts.remove(gift);
                         refreshOutGift();
                     }
-                });
+                }));
     }
 
 

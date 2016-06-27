@@ -4,6 +4,7 @@ import android.app.Application;
 
 import com.qiniu.android.storage.UploadManager;
 import com.tj.xengine.android.db.XDatabase;
+import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.XAsyncHttpClient;
 import com.tj.xengine.android.network.http.java.XJavaHttpClient;
 import com.tj.xengine.android.utils.XLog;
@@ -11,7 +12,6 @@ import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListDataSource;
 import com.tj.xengine.core.data.XListFilteredIdSourceImpl;
 import com.tj.xengine.core.data.XListIdDataSourceImpl;
-import com.tj.xengine.core.network.http.XAsyncHttp;
 import com.tj.xengine.core.network.http.XHttp;
 import com.tj.xengine.core.network.http.XHttpConfig;
 

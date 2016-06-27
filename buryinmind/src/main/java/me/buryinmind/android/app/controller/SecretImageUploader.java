@@ -14,6 +14,7 @@ import com.tj.xengine.core.toolkit.taskmgr.XTaskMgrListener;
 import com.tj.xengine.core.toolkit.taskmgr.serial.XSerialMgrImpl;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,14 +33,14 @@ public class SecretImageUploader {
 
     private XHttp mHttpClient;
     private XTaskMgr<XMgrTaskExecutor<SecretUploadBean>, SecretUploadBean> mTaskMgr;
-    private Map<Secret, ProgressListener<Secret>> mListener;
+    private List<ProgressListener<Secret>> mListener;
     private File mUploadDir;// 用于加密解密的临时文件夹
     private UploadManager mQiniuUploadMgr;
 
     public SecretImageUploader(Context context, XHttp httpClient, UploadManager qiniuUploadMgr) {
         mHttpClient = httpClient;
         mQiniuUploadMgr = qiniuUploadMgr;
-        mListener = new HashMap<Secret, ProgressListener<Secret>>();
+        mListener = new ArrayList<ProgressListener<Secret>>();
         mUploadDir = MyApplication.getCacheDirectory();;
         mTaskMgr = new XSerialMgrImpl<SecretUploadBean>();
         mTaskMgr.registerListener(new InnerListener(
@@ -48,23 +49,24 @@ public class SecretImageUploader {
                             @Override
                             public boolean handleMessage(Message msg) {
                                 Secret secret = (Secret) msg.obj;
-                                ProgressListener<Secret> listener = mListener.get(secret);
-                                if (listener != null) {
                                     switch (msg.what) {
                                         case MSG_PROGRESS:
-                                            listener.onProgress(secret,
-                                                    secret.completeSize, secret.size);
+                                            for (ProgressListener<Secret> listener : mListener) {
+                                                listener.onProgress(secret, secret.completeSize, secret.size);
+                                            }
                                             break;
                                         case MSG_FINISH:
-                                            mListener.remove(secret);
-                                            listener.onResult(true, secret);
+                                            secret.completeSize = -1;
+                                            for (ProgressListener<Secret> listener : mListener) {
+                                                listener.onResult(true, secret);
+                                            }
                                             break;
                                         case MSG_ERROR:
-                                            mListener.remove(secret);
-                                            listener.onResult(false, secret);
+                                            for (ProgressListener<Secret> listener : mListener) {
+                                                listener.onResult(false, secret);
+                                            }
                                             break;
                                     }
-                                }
                                 return true;
                             }
                         })));
@@ -76,14 +78,24 @@ public class SecretImageUploader {
     }
 
     @MainThread
-    public void upload(Secret secret, ProgressListener<Secret> listener) {
+    public void registerListener(ProgressListener<Secret> listener) {
+        if (!mListener.contains(listener))
+            mListener.add(listener);
+    }
+
+    @MainThread
+    public void unregisterListener(ProgressListener<Secret> listener) {
+        mListener.remove(listener);
+    }
+
+    @MainThread
+    public void upload(Secret secret) {
         if (!secret.needUpload) {
             return;
         }
 
         SecretUploadBean bean = new SecretUploadBean(secret);
         if (mTaskMgr.addTask(createTask(bean))) {
-            mListener.put(secret, listener);
             mTaskMgr.start();
         }
     }
