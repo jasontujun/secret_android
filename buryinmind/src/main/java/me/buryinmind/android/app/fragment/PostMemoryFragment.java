@@ -195,7 +195,7 @@ public class PostMemoryFragment extends XFragment {
         if (XStringUtil.isEmpty(mReceiver.uid) &&
                 (XStringUtil.isEmpty(mQuestion) || XStringUtil.isEmpty(mAnswer))) {
             Toast.makeText(getActivity(), R.string.error_empty_qna, Toast.LENGTH_SHORT).show();
-            ViewUtil.animationShake(mLockBtn);
+            ViewUtil.animateShake(mLockBtn);
             return;
         }
         // 弹出确认对话框

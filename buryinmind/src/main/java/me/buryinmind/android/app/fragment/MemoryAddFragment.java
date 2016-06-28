@@ -132,7 +132,7 @@ public class MemoryAddFragment extends XFragment {
                                               if (targetCal.before(birthCal) || targetCal.after(Calendar.getInstance())) {
                                                   // 选择日期早于出生日期，或晚于当前日期，重选！
                                                   Toast.makeText(datePickerDialog.getActivity(), R.string.error_invalid_date, Toast.LENGTH_SHORT).show();
-                                                  ViewUtil.animationShake(mHappenTimeView);
+                                                  ViewUtil.animateShake(mHappenTimeView);
                                               } else {
                                                   if (mHappenTime == null) {
                                                       mHappenTime = new long[2];
@@ -193,12 +193,12 @@ public class MemoryAddFragment extends XFragment {
         }
         if (mHappenTime == null) {
             Toast.makeText(getActivity(), R.string.error_empty_date, Toast.LENGTH_SHORT).show();
-            ViewUtil.animationShake(mHappenTimeView);
+            ViewUtil.animateShake(mHappenTimeView);
             return;
         }
         if (mHappenTime[0] > mHappenTime[1]) {
             Toast.makeText(getActivity(), R.string.error_invalid_date, Toast.LENGTH_SHORT).show();
-            ViewUtil.animationShake(mHappenTimeView);
+            ViewUtil.animateShake(mHappenTimeView);
             return;
         }
         if (XStringUtil.isEmpty(mLocalCoverPath)) {
@@ -219,7 +219,7 @@ public class MemoryAddFragment extends XFragment {
                         @Override
                         public void onDismiss() {
                             if (!confirm) {
-                                ViewUtil.animationShake(mCoverImageLayout);
+                                ViewUtil.animateShake(mCoverImageLayout);
                             }
                         }
                     }).show(getFragmentManager(), ConfirmDialog.TAG);

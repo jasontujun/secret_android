@@ -174,7 +174,7 @@ public class TimelineActivity extends XActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        Fragment current = getCurrentFragment();
         switch (item.getItemId()) {
             case android.R.id.home:
                 if (current != null && !(current instanceof TimelineFragment)) {
@@ -232,6 +232,11 @@ public class TimelineActivity extends XActivity {
     }
 
     @Override
+    protected Fragment getCurrentFragment() {
+        return getFragmentManager().findFragmentById(R.id.content_layout);
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
             case HEADER_REQUEST_CODE:
@@ -267,7 +272,7 @@ public class TimelineActivity extends XActivity {
                 break;
             case COVER_REQUEST_CODE:
                 if (resultCode == RESULT_OK && data != null) {
-                    Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+                    Fragment current = getCurrentFragment();
                     if (current instanceof MemoryAddFragment) {
                         // Get the Path of the selected file
                         String path = FileUtils.getPath(this, data.getData());
@@ -280,7 +285,7 @@ public class TimelineActivity extends XActivity {
     }
 
     private void refreshToolBar() {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        Fragment current = getCurrentFragment();
         if (current == null) {
             return;
         }
@@ -356,7 +361,7 @@ public class TimelineActivity extends XActivity {
 
 
     private void goToNext(Class<?> clazz) {
-        final Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        final Fragment current = getCurrentFragment();
         if (clazz == TimelineFragment.class) {
             if (mTimelineFragment == null) {
                 mTimelineFragment = new TimelineFragment();
@@ -381,8 +386,7 @@ public class TimelineActivity extends XActivity {
                     public void onRefresh(int refreshEvent, Object data) {
                         switch (refreshEvent) {
                             case TimelineFragment.REFRESH_EXPAND:
-                                if (getFragmentManager().findFragmentById(R.id.content_layout)
-                                        instanceof TimelineFragment) {
+                                if (getCurrentFragment() instanceof TimelineFragment) {
                                     mAppBar.setExpanded(true, true);
                                 }
                                 break;

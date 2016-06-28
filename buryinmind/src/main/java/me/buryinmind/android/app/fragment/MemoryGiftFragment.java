@@ -3,6 +3,8 @@ package me.buryinmind.android.app.fragment;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -33,10 +35,16 @@ import java.util.List;
 
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
+import me.buryinmind.android.app.adapter.XListAdapter;
+import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.controller.ProgressListener;
 import me.buryinmind.android.app.data.SecretSource;
+import me.buryinmind.android.app.dialog.ConfirmDialog;
+import me.buryinmind.android.app.dialog.DialogListener;
 import me.buryinmind.android.app.model.Memory;
+import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.Secret;
+import me.buryinmind.android.app.uicontrol.XLinearLayoutManager;
 import me.buryinmind.android.app.util.ApiUtil;
 import me.buryinmind.android.app.util.TimeUtil;
 import se.emilsjolander.flipview.FlipView;
@@ -54,6 +62,7 @@ public class MemoryGiftFragment extends XFragment {
 
     private FlipView mSecretFlip;
     private FlipAdapter mAdapter;
+    private GiftAdapter mGiftAdapter;
     private int mScreenWidth;
     private int mScreenHeight;
 
@@ -77,6 +86,7 @@ public class MemoryGiftFragment extends XFragment {
         // 创建Adapter
         mAdapter = new FlipAdapter(getActivity());
         mLastPage = -1;
+        mGiftAdapter = new GiftAdapter();
         // 在onCreate时请求数据，可以避免fragment切换时过于频繁请求
         requestDetail();
     }
@@ -200,6 +210,15 @@ public class MemoryGiftFragment extends XFragment {
                         mWaiting = false;
                         notifyLoading(false);
                         List<Secret> secrets = null;
+                        if (jo.has("gifts") && !jo.isNull("gifts")) {
+                            try {
+                                JSONArray giftArr = jo.getJSONArray("gifts");
+                                mMemory.outGifts = MemoryGift.fromJson(giftArr);
+                                mGiftAdapter.setData(mMemory.outGifts);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
                         if (jo.has("secrets") && !jo.isNull("secrets")) {
                             try {
                                 JSONArray secretArr = jo.getJSONArray("secrets");
@@ -230,6 +249,106 @@ public class MemoryGiftFragment extends XFragment {
         return true;
     }
 
+
+    private void cancelMemory(final MemoryGift gift) {
+        if (mWaiting) {
+            return;
+        }
+        mWaiting = true;
+        putAsyncTask(MyApplication.getAsyncHttp().execute(
+                ApiUtil.cancelMemory(gift.gid),
+                new XAsyncHttp.Listener() {
+                    @Override
+                    public void onCancelled() {
+                    }
+
+                    @Override
+                    public void onNetworkError() {
+                        Toast.makeText(getActivity(), R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                        mWaiting = false;
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        Toast.makeText(getActivity(), R.string.error_upload_picture, Toast.LENGTH_SHORT).show();
+                        mWaiting = false;
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                        mWaiting = false;
+                        mMemory.outGifts.remove(gift);
+                        mGiftAdapter.deleteData(gift);
+                    }
+                }));
+    }
+
+
+    private class GiftAdapter extends XListAdapter<MemoryGift> {
+
+        public GiftAdapter() {
+            super(R.layout.item_receiver);
+        }
+
+        @Override
+        public void onBindViewHolder(XViewHolder holder, int position) {
+            final MemoryGift item = getData().get(position);
+            Glide.with(MemoryGiftFragment.this)
+                    .load(ApiUtil.getIdUrl(item.receiverId))
+                    .dontAnimate()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .error(R.drawable.headicon_default)
+                    .into(holder.getView(R.id.account_head_img, ImageView.class));
+            ImageView stateView = (ImageView) holder.getView(R.id.account_state);
+            if (item.takeTime == -1) {
+                stateView.setVisibility(View.VISIBLE);
+                stateView.setImageResource(R.drawable.stamp_deny);
+            } else if (item.takeTime > 0) {
+                stateView.setVisibility(View.VISIBLE);
+                stateView.setImageResource(R.drawable.stamp_take);
+            } else if (item.takeTime == 0) {
+                stateView.setVisibility(View.GONE);
+            }
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (item.takeTime == -1) {
+                        Toast.makeText(getActivity(), String.format(getResources()
+                                        .getString(R.string.info_memory_receiver_reject), item.receiverName),
+                                Toast.LENGTH_SHORT).show();
+                    } else if (item.takeTime > 0) {
+                        Toast.makeText(getActivity(), String.format(getResources()
+                                        .getString(R.string.info_memory_receiver_taken), item.receiverName),
+                                Toast.LENGTH_SHORT).show();
+                    } else if (item.takeTime == 0) {
+                        if (mWaiting) {
+                            Toast.makeText(getActivity(), R.string.error_loading, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        // 撤销寄出的回忆，弹出提示对话框！
+                        ConfirmDialog.newInstance(String.format(getResources()
+                                        .getString(R.string.info_memory_receiver_cancel), item.receiverName),
+                                new DialogListener() {
+                                    boolean confirm = false;
+
+                                    @Override
+                                    public void onDone(Object... result) {
+                                        confirm = (boolean) result[0];
+                                        if (confirm) {
+                                            // 撤销回忆
+                                            cancelMemory(item);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onDismiss() {
+                                    }
+                                }).show(getFragmentManager(), ConfirmDialog.TAG);
+                    }
+                }
+            });
+        }
+    }
 
     private class FlipAdapter extends BaseAdapter {
 
@@ -341,6 +460,8 @@ public class MemoryGiftFragment extends XFragment {
                     holder.mNameView = (TextView) convertView.findViewById(R.id.memory_name_txt);
                     holder.mAuthorNameView = (TextView) convertView.findViewById(R.id.memory_author_name_txt);
                     holder.mDateView = (TextView) convertView.findViewById(R.id.memory_time_view);
+                    holder.mStampLayout = convertView.findViewById(R.id.memory_out_gift_layout);
+                    holder.mStampList = (RecyclerView) convertView.findViewById(R.id.memory_out_gift_list);
                     convertView.setTag(holder);
                     if (!holders.contains(holder)) {
                         holders.add(holder);
@@ -355,6 +476,8 @@ public class MemoryGiftFragment extends XFragment {
                         holder.mNameView = (TextView) convertView.findViewById(R.id.memory_name_txt);
                         holder.mAuthorNameView = (TextView) convertView.findViewById(R.id.memory_author_name_txt);
                         holder.mDateView = (TextView) convertView.findViewById(R.id.memory_time_view);
+                        holder.mStampLayout = convertView.findViewById(R.id.memory_out_gift_layout);
+                        holder.mStampList = (RecyclerView) convertView.findViewById(R.id.memory_out_gift_list);
                         holder.needReLayout = false;
                         convertView.setTag(holder);
                         if (!holders.contains(holder)) {
@@ -384,6 +507,14 @@ public class MemoryGiftFragment extends XFragment {
                 holder.mAuthorNameView.setText(memory.authorName);
                 holder.mDateView.setText(String.format(getResources().getString(R.string.info_memory_time),
                         XStringUtil.calendar2str(TimeUtil.getCalendar(memory.happenStartTime), ".")));
+                if (memory.outGifts == null || memory.outGifts.size() == 0) {
+                    holder.mStampLayout.setVisibility(View.GONE);
+                } else {
+                    holder.mStampLayout.setVisibility(View.VISIBLE);
+                    holder.mStampList.setLayoutManager(new XLinearLayoutManager(getActivity(),
+                            LinearLayoutManager.HORIZONTAL, false));
+                    holder.mStampList.setAdapter(mGiftAdapter);
+                }
             } else {
                 if (convertView == null) {
                     holder = new ViewHolder();
@@ -449,6 +580,8 @@ public class MemoryGiftFragment extends XFragment {
             TextView mDateView;
             View mImageLayout;
             TextView mProgressView;
+            View mStampLayout;
+            RecyclerView mStampList;
             boolean needReLayout = false;
         }
 

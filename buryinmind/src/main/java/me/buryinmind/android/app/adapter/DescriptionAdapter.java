@@ -48,6 +48,19 @@ public class DescriptionAdapter extends XListAdapter<String> {
         this.listener = listener;
     }
 
+    public boolean cancelSelected() {
+        if (selectedIndex == -1) {
+            return false;
+        }
+        int lastSelected = selectedIndex;
+        selectedIndex = -1;
+        notifyItemChanged(lastSelected);
+        // 取消选中，回调
+        if (listener != null)
+            listener.onSelect(selectedIndex, null);
+        return true;
+    }
+
     @Override
     public int getItemViewType(int position) {
         if (position == getItemCount() - 1)

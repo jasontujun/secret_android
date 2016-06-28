@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <se.emilsjolander.flipview.FlipView
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/secret_flip"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:orientation="vertical"
-        app:overFlipMode="rubber_band"/>
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/secret_flip"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:orientation="vertical"
+    app:overFlipMode="rubber_band" />

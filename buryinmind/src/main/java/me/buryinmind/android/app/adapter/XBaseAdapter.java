@@ -1,9 +1,9 @@
 package me.buryinmind.android.app.adapter;
 
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,16 +11,16 @@ import java.util.List;
 /**
  * Created by jasontujun on 2016/6/6.
  */
-public abstract class XListAdapter<T> extends RecyclerView.Adapter<XViewHolder> {
+public abstract class XBaseAdapter<T> extends BaseAdapter {
 
     private int mLayoutId;
     private final List<T> mValues;
 
-    public XListAdapter(int layoutId) {
+    public XBaseAdapter(int layoutId) {
         this(layoutId, null);
     }
 
-    public XListAdapter(int layoutId, List<T> items) {
+    public XBaseAdapter(int layoutId, List<T> items) {
         mLayoutId = layoutId;
         mValues = items == null ? new ArrayList<T>() : new ArrayList<T>(items);
     }
@@ -38,13 +38,13 @@ public abstract class XListAdapter<T> extends RecyclerView.Adapter<XViewHolder> 
     public void addData(T data) {
         int position = mValues.size();
         mValues.add(data);
-        notifyItemInserted(position);
+        notifyDataSetChanged();
     }
 
     public void addData(List<T> data) {
         int position = mValues.size();
         mValues.addAll(data);
-        notifyItemRangeInserted(position, data.size());
+        notifyDataSetChanged();
     }
 
     public void deleteData(T data) {
@@ -53,19 +53,14 @@ public abstract class XListAdapter<T> extends RecyclerView.Adapter<XViewHolder> 
             return;
         }
         mValues.remove(data);
-        notifyItemRemoved(pos);
+        notifyDataSetChanged();
     }
 
     public void deleteData(int pos) {
         if (0 <= pos && pos < mValues.size()) {
             mValues.remove(pos);
-            notifyItemRemoved(pos);
+            notifyDataSetChanged();
         }
-    }
-
-    public void clearData() {
-        mValues.clear();
-        notifyDataSetChanged();
     }
 
     public void refreshData(T data, Object payload) {
@@ -73,18 +68,37 @@ public abstract class XListAdapter<T> extends RecyclerView.Adapter<XViewHolder> 
         if (pos == -1) {
             return;
         }
-        notifyItemChanged(pos, payload);
+        notifyDataSetChanged();
     }
 
     @Override
-    public XViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(mLayoutId, parent, false);
-        return new XViewHolder(view);
+    public long getItemId(int position) {
+        return position;
     }
 
     @Override
-    public int getItemCount() {
+    public Object getItem(int position) {
+        return mValues.get(position);
+    }
+
+    @Override
+    public int getCount() {
         return mValues.size();
     }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        XViewHolder holder;
+        if (convertView == null) {
+            convertView = LayoutInflater.from(parent.getContext()).inflate(mLayoutId, parent, false);
+            holder = new XViewHolder(convertView);
+            convertView.setTag(holder);
+        } else {
+            holder = (XViewHolder) convertView.getTag();
+        }
+        onBindViewHolder(holder, position);
+        return convertView;
+    }
+
+    public abstract void onBindViewHolder(XViewHolder holder, int position);
 }

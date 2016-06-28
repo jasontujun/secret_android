@@ -64,18 +64,25 @@ public class UserDescriptionFragment extends XFragment {
         return rootView;
     }
 
+    @Override
+    public boolean onBackHandle() {
+        return mDescriptionAdapter.cancelSelected();
+    }
+
     public void confirm() {
         ViewUtil.hideInputMethod(getActivity());
         List<String> des = mDescriptionAdapter.getData();
-        if (des.size() < 3) {
-            Toast.makeText(getActivity(), R.string.error_insufficient_des,
+        if (des.size() < GlobalSource.DES_MIN_SIZE) {
+            Toast.makeText(getActivity(), String.format(getResources().getString
+                            (R.string.error_insufficient_des), GlobalSource.DES_MIN_SIZE),
                     Toast.LENGTH_SHORT).show();
-            ViewUtil.animationShake(mDescriptionList);
+            ViewUtil.animateShake(mDescriptionList);
             return;
-        } else if (des.size() > 7){
-            Toast.makeText(getActivity(), R.string.error_excessive_des,
+        } else if (des.size() > GlobalSource.DES_MAX_SIZE){
+            Toast.makeText(getActivity(), String.format(getResources().getString
+                            (R.string.error_excessive_des), GlobalSource.DES_MAX_SIZE),
                     Toast.LENGTH_SHORT).show();
-            ViewUtil.animationShake(mDescriptionList);
+            ViewUtil.animateShake(mDescriptionList);
             return;
         }
         // 上传服务器

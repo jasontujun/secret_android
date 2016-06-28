@@ -142,6 +142,11 @@ public class LoginActivity extends XActivity {
         }
     }
 
+    @Override
+    protected Fragment getCurrentFragment() {
+        return getFragmentManager().findFragmentById(R.id.content_layout);
+    }
+
     private Fragment createFragment(final int step) {
         Bundle arguments = new Bundle();
         Fragment fragment = null;

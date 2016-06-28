@@ -138,7 +138,7 @@ public abstract class ViewUtil {
         view.startAnimation(scaleAnimation);
     }
 
-    public static void animationShake(View view) {
+    public static void animateShake(View view) {
         if (view == null)
             return;
         Animation shakeAnimation = new TranslateAnimation(0f, 10f, 0f, 0f);

@@ -29,8 +29,10 @@ public class GlobalSource implements XDataSource {
     private static final String KEY_USER_TOKEN_TIME = "userTokenTime";
     private static final String KEY_USER_RECORD = "userRecord";
 
-    public static final int NAME_MIN_SIZE = 2;// 密码最少位数
+    public static final int NAME_MIN_SIZE = 2;// 姓名最少位数
     public static final int PASSWORD_MIN_SIZE = 6;// 密码最少位数
+    public static final int DES_MIN_SIZE = 3;// 描述下限
+    public static final int DES_MAX_SIZE = 7;// 描述上限
     public static final long DEFAULT_TOKEN_DURATION = 24 * 60 * 60 *1000;// token默认的有效期:1天
     public static final int PRESS_BACK_INTERVAL = 1500; // back按键间隔，单位：毫秒
 

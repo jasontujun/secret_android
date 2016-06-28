@@ -131,6 +131,11 @@ public class MemoryGiftActivity extends XActivity {
     }
 
     @Override
+    protected Fragment getCurrentFragment() {
+        return getFragmentManager().findFragmentById(R.id.content_layout);
+    }
+
+    @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         XLog.d(TAG, "onConfigurationChanged()");
@@ -142,7 +147,7 @@ public class MemoryGiftActivity extends XActivity {
     }
 
     private void refreshMenu() {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        Fragment current = getCurrentFragment();
         if (current == null) {
             return;
         }
@@ -163,7 +168,7 @@ public class MemoryGiftActivity extends XActivity {
     }
 
     private void goToNext(Class<?> clazz, Object data) {
-        Fragment current = getFragmentManager().findFragmentById(R.id.content_layout);
+        Fragment current = getCurrentFragment();
         if (current == null)
             return;
         if (current instanceof MemoryGiftFragment &&
@@ -250,6 +255,9 @@ public class MemoryGiftActivity extends XActivity {
                         }
                     }
                 });
+        Bundle arguments = new Bundle();
+        arguments.putString(SearchFriendsFragment.KEY_MID, mMemory.mid);
+        fragment.setArguments(arguments);
         return fragment;
     }
 

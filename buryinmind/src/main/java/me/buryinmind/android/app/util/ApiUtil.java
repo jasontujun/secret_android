@@ -46,19 +46,36 @@ public abstract class ApiUtil {
     }
 
     public static XHttpRequest searchSeedUser(String name, List<String> des) {
-        return MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/search")
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/users/seed/search")
                 .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
-                .addStringParam("name", name)
-                .addStringParam("des", JsonUtil.List2JsonString(des));
+                .addStringParam("name", name);
+        if (des != null && des.size() > 0) {
+            request.addStringParam("des", JsonUtil.List2JsonString(des));
+        }
+        return request;
     };
 
     public static XHttpRequest searchActiveUser(String name, List<String> des) {
-        return MyApplication.getHttp().newRequest(DOMAIN + "/users/search")
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/users/search")
                 .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
-                .addStringParam("name", name)
-                .addStringParam("des", JsonUtil.List2JsonString(des));
+                .addStringParam("name", name);
+        if (des != null && des.size() > 0) {
+            request.addStringParam("des", JsonUtil.List2JsonString(des));
+        }
+        return request;
+    };
+
+    public static XHttpRequest searchAllUser(String name, List<String> des) {
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/users/all/search")
+                .setMethod(XHttpRequest.Method.POST)
+                .setCharset("UTF-8")
+                .addStringParam("name", name);
+        if (des != null && des.size() > 0) {
+            request.addStringParam("des", JsonUtil.List2JsonString(des));
+        }
+        return request;
     };
 
     public static XHttpRequest getFriendList() {

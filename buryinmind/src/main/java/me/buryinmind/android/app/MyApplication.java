@@ -70,7 +70,7 @@ public class MyApplication extends Application {
         XDefaultDataRepo repo = XDefaultDataRepo.getInstance();
         repo.registerDataSource(new GlobalSource(this, SOURCE_GLOBAL));
         repo.registerDataSource(new XListIdDataSourceImpl<Memory>(Memory.class, SOURCE_MEMORY));
-        repo.registerDataSource(new XListFilteredIdSourceImpl<User>(User.class, SOURCE_FRIEND));
+        repo.registerDataSource(new XListIdDataSourceImpl<User>(User.class, SOURCE_FRIEND));
         SecretSource secretSource = new SecretSource(SOURCE_SECRET);
         secretSource.setReplaceOverride(true);
         secretSource.loadFromDatabase();

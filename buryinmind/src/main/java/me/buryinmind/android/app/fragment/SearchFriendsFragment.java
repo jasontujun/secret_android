@@ -1,5 +1,6 @@
 package me.buryinmind.android.app.fragment;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
@@ -21,9 +22,9 @@ import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
 import com.tj.xengine.core.data.XListFilteredIdSourceImpl;
+import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.toolkit.filter.XBaseFilter;
-import com.tj.xengine.core.toolkit.filter.XFilter;
 import com.tj.xengine.core.utils.XStringUtil;
 
 import org.json.JSONArray;
@@ -33,6 +34,9 @@ import java.util.List;
 import me.buryinmind.android.app.MyApplication;
 import me.buryinmind.android.app.R;
 import me.buryinmind.android.app.adapter.DescriptionAdapter;
+import me.buryinmind.android.app.data.GlobalSource;
+import me.buryinmind.android.app.model.Memory;
+import me.buryinmind.android.app.model.MemoryGift;
 import me.buryinmind.android.app.model.User;
 import me.buryinmind.android.app.adapter.XViewHolder;
 import me.buryinmind.android.app.uicontrol.XAutoGridLayoutManager;
@@ -44,35 +48,58 @@ import me.buryinmind.android.app.util.ViewUtil;
  */
 public class SearchFriendsFragment extends XFragment {
     private static final String TAG = SearchFriendsFragment.class.getSimpleName();
+    public static final String KEY_MID = "mid";
 
     private View mProgressView;
+    private View mSearchBtn;
     private EditText mNameInputView;
     private RecyclerView mDescriptionList;
     private View mDescriptionListLayout;
-    private RecyclerView mFriendList;
+    private RecyclerView mSearchList;
 
     private DescriptionAdapter mDescriptionAdapter;
-    private UserAdapter mFriendAdapter;
-    private XListFilteredIdSourceImpl<User> mFriendSource;
-    private XFilter<User> mFriendFilter;
+    private UserAdapter mSearchAdapter;
+    private XListIdDataSourceImpl<User> mFriendSource;
+    private XListFilteredIdSourceImpl<User> mSearchSource;
     private User mNewUser;
+    private Memory mMemory;
 
     private boolean mWaiting;
+    private AsyncTask mTask;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         XLog.d(TAG, "onCreate().savedInstanceState=" + savedInstanceState);
         super.onCreate(savedInstanceState);
+        Bundle argument = getArguments();
+        if (argument != null) {
+            String mid = argument.getString(KEY_MID);
+            XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
+                    XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
+            mMemory = source.getById(mid);
+        }
         mNewUser = new User();
-        mFriendSource = (XListFilteredIdSourceImpl<User>) XDefaultDataRepo
+        mFriendSource = (XListIdDataSourceImpl<User>) XDefaultDataRepo
                 .getInstance().getSource(MyApplication.SOURCE_FRIEND);
-        mFriendFilter = new XBaseFilter<User>() {
+        mSearchSource = new XListFilteredIdSourceImpl<>(User.class, "SearchUser");
+        mSearchSource.addAll(mFriendSource.copyAll());
+        mSearchSource.setFilter(new XBaseFilter<User>() {
             @Override
             public User doFilter(User user) {
+                // 去掉已经赠送的人
+                if (mMemory != null && mMemory.outGifts != null) {
+                    for (MemoryGift gift : mMemory.outGifts) {
+                        if (gift.receiverId.equals(user.uid)) {
+                            return null;
+                        }
+                    }
+                }
+                // 去掉和输入框不匹配的人
                 if (!XStringUtil.isEmpty(mNewUser.name) &&
                         !user.name.startsWith(mNewUser.name)) {
                     return null;
                 }
+                // 去掉和描述列表不匹配的人
                 if (mNewUser.descriptions != null
                         && user.descriptions != null) {
                     for (String inputDes : mNewUser.descriptions) {
@@ -90,19 +117,18 @@ public class SearchFriendsFragment extends XFragment {
                 }
                 return user;
             }
-        };
-        mFriendSource.setFilter(mFriendFilter);
-        mFriendAdapter = new UserAdapter(mFriendSource);
+        });
+        mSearchAdapter = new UserAdapter(mSearchSource);
         mDescriptionAdapter = new DescriptionAdapter(getActivity(),
                 new DescriptionAdapter.Listener() {
                     @Override
                     public void onAdd(String des) {
-                        refreshFriendsList();
+                        refreshSearchList();
                     }
 
                     @Override
                     public void onDelete(String des) {
-                        refreshFriendsList();
+                        refreshSearchList();
                     }
 
                     @Override
@@ -119,13 +145,14 @@ public class SearchFriendsFragment extends XFragment {
         XLog.d(TAG, "onCreateView()");
         View rootView = inflater.inflate(R.layout.fragment_search_frends, container, false);
         mProgressView = rootView.findViewById(R.id.loading_progress);
+        mSearchBtn = rootView.findViewById(R.id.receiver_search_button);
         mNameInputView = (EditText) rootView.findViewById(R.id.receiver_name_input);
         mDescriptionList = (RecyclerView) rootView.findViewById(R.id.receiver_des_list);
         mDescriptionListLayout = rootView.findViewById(R.id.receiver_des_list_layout);
-        mFriendList = (RecyclerView) rootView.findViewById(R.id.friend_list);
+        mSearchList = (RecyclerView) rootView.findViewById(R.id.friend_list);
 
         // 初始化朋友列表
-        mFriendList.setAdapter(mFriendAdapter);
+        mSearchList.setAdapter(mSearchAdapter);
         // 初始化描述列表
         mDescriptionList.setLayoutManager(new XAutoGridLayoutManager(getActivity(), 2000));
         mDescriptionList.setAdapter(mDescriptionAdapter);
@@ -142,14 +169,21 @@ public class SearchFriendsFragment extends XFragment {
                 final String name = s.toString().trim();
                 mNewUser.name = name;
                 if (XStringUtil.isEmpty(name)) {
-                    mFriendAdapter.setNewUser(null);
+                    // 将SearchSource还原成friend数据
+                    mSearchSource.clear();
+                    mSearchSource.addAll(mFriendSource.copyAll());
+                    // 不显示“创建”用户的item
+                    mSearchAdapter.setNewUser(null);
+                    // 清空描述列表
+                    mDescriptionAdapter.clearData();
+                    // 隐藏搜索按钮，描述列表
+                    ViewUtil.animateFade(mSearchBtn, true);
                     ViewUtil.animateFade(mDescriptionListLayout, true);
                 } else {
-                    mFriendAdapter.setNewUser(mNewUser);
-                    ViewUtil.animateFade(mDescriptionListLayout, false);
+                    ViewUtil.animateFade(mSearchBtn, false);
                 }
                 // 刷新用户列表
-                refreshFriendsList();
+                refreshSearchList();
             }
 
             @Override
@@ -162,17 +196,26 @@ public class SearchFriendsFragment extends XFragment {
             public boolean onEditorAction(TextView v, int id, KeyEvent event) {
                 if (id == EditorInfo.IME_ACTION_SEARCH) {
                     XLog.d(TAG, "mNameInputView键入enter键");
-                    ViewUtil.hideInputMethod(getActivity());
-                    // TODO 联网搜索相关名字的用户
+                    search();
                     return true;
                 }
                 return false;
             }
         });
+        mSearchBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                search();
+            }
+        });
         if (XStringUtil.isEmpty(mNameInputView.getText().toString())) {
+            mSearchBtn.setAlpha(0f);
+            mSearchBtn.setVisibility(View.GONE);
             mDescriptionListLayout.setAlpha(0f);
             mDescriptionListLayout.setVisibility(View.GONE);
         } else {
+            mSearchBtn.setAlpha(1f);
+            mSearchBtn.setVisibility(View.VISIBLE);
             mDescriptionListLayout.setAlpha(1f);
             mDescriptionListLayout.setVisibility(View.VISIBLE);
         }
@@ -209,9 +252,42 @@ public class SearchFriendsFragment extends XFragment {
         super.onDestroyView();
     }
 
+    @Override
+    public boolean onBackHandle() {
+        XLog.d(TAG, "onBackHandle()");
+        if (mDescriptionAdapter.cancelSelected()) {
+            return true;
+        }
+        if (mTask != null) {
+            mTask.cancel(true);
+            return true;
+        }
+        if (!XStringUtil.isEmpty(mNameInputView.getText().toString())) {
+            mNameInputView.setText("");
+            mNameInputView.clearFocus();
+            ViewUtil.hideInputMethod(getActivity());
+            return true;
+        }
+        return false;
+    }
+
     private void showProgress(boolean show) {
-        ViewUtil.animateFadeInOut(mFriendList, show);
+        ViewUtil.animateFadeInOut(mSearchList, show);
         ViewUtil.animateFadeInOut(mProgressView, !show);
+    }
+
+    private void search() {
+        ViewUtil.hideInputMethod(getActivity());
+        final String name = mNameInputView.getText().toString().trim();
+        if (!XStringUtil.isEmpty(name)) {
+            mNameInputView.clearFocus();
+            mDescriptionAdapter.clearData();
+            mSearchAdapter.setNewUser(mNewUser);
+            ViewUtil.animateFade(mSearchBtn, true);
+            ViewUtil.animateFade(mDescriptionListLayout, false);
+            // 联网搜索相关名字的用户
+            requestUserByName(name);
+        }
     }
 
     private void requestFriends() {
@@ -253,17 +329,61 @@ public class SearchFriendsFragment extends XFragment {
                                 user.isFriend = true;
                             }
                             mFriendSource.addAll(users);
-                            mFriendSource.sortOrigin(User.comparator);
-                            mFriendAdapter.notifyDataSetChanged();
+                            mSearchSource.addAll(users);
+                            mSearchSource.sortOrigin(User.comparator);
+                            refreshSearchList();
                         }
                     }
                 }));
     }
 
-    private void refreshFriendsList() {
+    private void requestUserByName(String name) {
+        if (mTask != null) {
+            mTask.cancel(true);
+        }
+        showProgress(true);
+        mTask = MyApplication.getAsyncHttp().execute(
+                ApiUtil.searchAllUser(name, null),
+                new XJsonArrayHandler(),
+                new XAsyncHttp.Listener<JSONArray>() {
+                    @Override
+                    public void onCancelled() {
+                        showProgress(false);
+                        mTask = null;
+                    }
+
+                    @Override
+                    public void onNetworkError() {
+                        showProgress(false);
+                        Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
+                        mTask = null;
+                    }
+
+                    @Override
+                    public void onFinishError(XHttpResponse xHttpResponse) {
+                        showProgress(false);
+                        Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
+                        mTask = null;
+                    }
+
+                    @Override
+                    public void onFinishSuccess(XHttpResponse xHttpResponse, JSONArray jsonArray) {
+                        showProgress(false);
+                        List<User> users = User.fromJson(jsonArray);
+                        if (users != null && users.size() > 0) {
+                            mSearchSource.addAll(users);
+                            mSearchSource.sortOrigin(User.comparator);
+                            refreshSearchList();
+                        }
+                        mTask = null;
+                    }
+                });
+    }
+
+    private void refreshSearchList() {
         mNewUser.descriptions = mDescriptionAdapter.getData();
-        mFriendSource.doFilter();
-        mFriendAdapter.notifyDataSetChanged();
+        mSearchSource.doFilter();
+        mSearchAdapter.notifyDataSetChanged();
     }
 
     private class UserAdapter extends RecyclerView.Adapter<XViewHolder> {
@@ -311,18 +431,25 @@ public class SearchFriendsFragment extends XFragment {
                 holder.itemView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        // 创建新用户，检查des数量
-                        if (newUser.descriptions == null
-                                || newUser.descriptions.size() < 3) {
-                            Toast.makeText(getActivity(), R.string.error_insufficient_des,
-                                    Toast.LENGTH_SHORT).show();
-                            ViewUtil.animationShake(mDescriptionListLayout);
+                        // 创建新用户，检查name长度，des数量
+                        if (newUser.name.length() < GlobalSource.NAME_MIN_SIZE) {
+                            Toast.makeText(getActivity(), R.string.error_invalid_name, Toast.LENGTH_SHORT).show();
+                            ViewUtil.animateShake(mNameInputView);
                             return;
                         }
-                        if (newUser.descriptions.size() > 7) {
-                            Toast.makeText(getActivity(), R.string.error_excessive_des,
+                        if (newUser.descriptions == null
+                                || newUser.descriptions.size() < GlobalSource.DES_MIN_SIZE) {
+                            Toast.makeText(getActivity(), String.format(getResources().getString
+                                            (R.string.error_insufficient_des), GlobalSource.DES_MIN_SIZE),
                                     Toast.LENGTH_SHORT).show();
-                            ViewUtil.animationShake(mDescriptionListLayout);
+                            ViewUtil.animateShake(mDescriptionListLayout);
+                            return;
+                        }
+                        if (newUser.descriptions.size() > GlobalSource.DES_MAX_SIZE) {
+                            Toast.makeText(getActivity(), String.format(getResources().getString
+                                            (R.string.error_excessive_des), GlobalSource.DES_MAX_SIZE),
+                                    Toast.LENGTH_SHORT).show();
+                            ViewUtil.animateShake(mDescriptionListLayout);
                             return;
                         }
                         // 新增一个用户
@@ -344,6 +471,7 @@ public class SearchFriendsFragment extends XFragment {
                 }
                 Glide.with(getActivity())
                         .load(ApiUtil.getIdUrl(user.uid))
+                        .dontAnimate()
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .placeholder(R.drawable.headicon_default)
                         .error(R.drawable.headicon_default)
@@ -362,7 +490,7 @@ public class SearchFriendsFragment extends XFragment {
 
         @Override
         public int getItemCount() {
-            return mFriendSource.size() + (newUser == null ? 0 : 1);
+            return mSearchSource.size() + (newUser == null ? 0 : 1);
         }
     }
 
