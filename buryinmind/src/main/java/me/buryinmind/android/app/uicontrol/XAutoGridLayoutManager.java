@@ -106,11 +106,11 @@ public class XAutoGridLayoutManager extends GridLayoutManager {
             }
             int spanCount;
             if (getOrientation() == VERTICAL) {
-                spanCount = getSpanCount() * childSize.x / getWidth();
+                spanCount = (int) Math.ceil(getSpanCount() * childSize.x / ((float)getWidth()));
                 XLog.d(TAG, "child index=" + i + ", child width="
                         + childSize.x + ", spanCount=" + spanCount);
             } else {
-                spanCount = getSpanCount() * childSize.y / getHeight();
+                spanCount = (int) Math.ceil(getSpanCount() * childSize.y / ((float)getHeight()));
                 XLog.d(TAG, "child index=" + i + ", child height="
                         + childSize.y + ", spanCount=" + spanCount);
             }

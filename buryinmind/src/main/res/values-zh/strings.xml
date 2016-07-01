@@ -28,7 +28,9 @@
     <string name="button_add_secret">添加</string>
     <string name="button_post">寄出</string>
     <string name="button_unlock">解锁</string>
-    <string name="button_ignore">和我无关</string>
+    <string name="button_ignore">忽略</string>
+    <string name="button_take">收到，谢谢!</string>
+    <string name="button_reject">抱歉，退回</string>
 
     <string name="error_network">网络有点问题哦</string>
     <string name="error_exception">出现异常!</string>
@@ -75,7 +77,7 @@
     <string name="info_memory_receiver">已寄给:</string>
     <string name="info_memory_receiver_taken">亲，“%1$s”已经收取了这份回忆了 ^_^</string>
     <string name="info_memory_receiver_reject">抱歉，“%1$s”已经拒绝了这份回忆了</string>
-    <string name="info_memory_receiver_cancel">“%1$s”还没收取这份回忆，确定撤回寄出的这份回忆?</string>
+    <string name="info_memory_receiver_cancel">“%1$s”还没收取这份回忆，确定撤回?</string>
     <string name="info_memory_time">于 %1$s</string>
     <string name="info_post_new_user">“%1$s”不在？\n把TA添加进“不忘”</string>
     <string name="info_post_lock_optional">可以设定一个问题，来锁住回忆</string>

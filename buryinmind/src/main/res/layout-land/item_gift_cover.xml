@@ -23,6 +23,7 @@
             android:id="@+id/memory_out_gift_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="30dp"
             android:layout_alignParentRight="true"
             android:orientation="vertical">
             <TextView

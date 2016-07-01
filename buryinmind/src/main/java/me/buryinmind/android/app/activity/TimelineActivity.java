@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -24,7 +23,6 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.utils.XLog;
 import com.tj.xengine.core.data.XDefaultDataRepo;
-import com.tj.xengine.core.data.XListIdDataSourceImpl;
 import com.tj.xengine.core.network.http.XHttpResponse;
 import com.tj.xengine.core.utils.XStringUtil;
 
@@ -390,6 +388,11 @@ public class TimelineActivity extends XActivity {
                                     mAppBar.setExpanded(true, true);
                                 }
                                 break;
+                            case TimelineFragment.REFRESH_COLLAPSE:
+                                if (getCurrentFragment() instanceof TimelineFragment) {
+                                    mAppBar.setExpanded(false, true);
+                                }
+                                break;
                             case TimelineFragment.REFRESH_SET_BIRTHDAY:
                                 goToNext(BirthdayFragment.class);
                                 break;
@@ -526,13 +529,12 @@ public class TimelineActivity extends XActivity {
                         public void onFinish ( boolean result, Object data){
                             showProgress(false);
                             if (result && data != null) {
-                                Memory memory = (Memory) data;
-                                XListIdDataSourceImpl<Memory> source = (XListIdDataSourceImpl<Memory>)
-                                        XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
-                                source.add(memory);
-                                source.sort(Memory.comparator);
-                                // 模拟返回按钮
+                                // 返回
                                 onBackPressed();
+                                // 添加memory
+                                if (mTimelineFragment != null) {
+                                    mTimelineFragment.addMemory((Memory) data);
+                                }
                             }
                         }
                     });

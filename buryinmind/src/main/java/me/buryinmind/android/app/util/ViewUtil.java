@@ -6,9 +6,11 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.view.View;
+import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.BounceInterpolator;
 import android.view.animation.CycleInterpolator;
 import android.view.animation.ScaleAnimation;
 import android.view.animation.TranslateAnimation;
@@ -71,7 +73,8 @@ public abstract class ViewUtil {
                     }
 
                     @Override
-                    public void onAnimationRepeat(Animator animation) {}
+                    public void onAnimationRepeat(Animator animation) {
+                    }
                 });
     }
 
@@ -79,7 +82,7 @@ public abstract class ViewUtil {
         if (view == null)
             return null;
         ObjectAnimator anim = ObjectAnimator
-                .ofFloat(view, "alpha", 1.0F, 0.1F)
+                .ofFloat(view, "alpha", 1.0f, 0.1f)
                 .setDuration(2000);
         anim.setRepeatCount(ValueAnimator.INFINITE);
         anim.setRepeatMode(ValueAnimator.REVERSE);
@@ -87,12 +90,25 @@ public abstract class ViewUtil {
         return anim;
     }
 
+    public static Animation animateShine(int count) {
+        if (count <= 0)
+            return null;
+        if (count % 2 != 1) {
+            count = count + 1;
+        }
+        Animation scaleAnimation = new AlphaAnimation(1.0f, 0.1f);
+        scaleAnimation.setDuration(500);
+        scaleAnimation.setRepeatCount(count);
+        scaleAnimation.setRepeatMode(Animation.REVERSE);
+        return scaleAnimation;
+    }
+
     public static Animator animateScale(final View view) {
         if (view == null)
             return null;
         ObjectAnimator anim = ObjectAnimator
                 .ofFloat(view, "myScale", 1.0F, 0.7F)
-                .setDuration(2000);
+                .setDuration(1000);
         anim.setRepeatCount(ValueAnimator.INFINITE);
         anim.setRepeatMode(ValueAnimator.REVERSE);
         anim.start();
@@ -105,6 +121,17 @@ public abstract class ViewUtil {
             }
         });
         return anim;
+    }
+
+    public static Animation animateScale(float initScale,float pivotX, float pivotY,
+                                         Animation.AnimationListener listener) {
+        if (initScale < 0)
+            return null;
+        Animation scaleAnimation = new ScaleAnimation(initScale, 1.0f, initScale, 1.0f, pivotX, pivotY);
+        scaleAnimation.setInterpolator(new AccelerateInterpolator());
+        scaleAnimation.setDuration(300);
+        scaleAnimation.setAnimationListener(listener);
+        return scaleAnimation;
     }
 
     public static void animateExpand(final View view, final boolean expand) {

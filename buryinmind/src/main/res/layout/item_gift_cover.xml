@@ -93,7 +93,7 @@
                 android:text="@string/info_memory_receiver"/>
             <android.support.v7.widget.RecyclerView
                 android:id="@+id/memory_out_gift_list"
-                android:layout_width="wrap_content"
+                android:layout_width="150dp"
                 android:layout_height="wrap_content"
                 app:layoutManager="LinearLayoutManager"
                 tools:layout_height="75dp"

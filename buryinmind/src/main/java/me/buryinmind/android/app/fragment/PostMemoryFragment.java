@@ -1,5 +1,6 @@
 package me.buryinmind.android.app.fragment;
 
+import android.animation.Animator;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -59,6 +60,7 @@ public class PostMemoryFragment extends XFragment {
 
     private boolean mWaiting;
     private boolean mQuestionShow;
+    private Animator mShineAnimator;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -223,9 +225,12 @@ public class PostMemoryFragment extends XFragment {
     private void lockerTip() {
         if (XStringUtil.isEmpty(mReceiver.uid) &&
                 (XStringUtil.isEmpty(mQuestion) || XStringUtil.isEmpty(mAnswer))) {
-            ViewUtil.animateShine(mLockBtn);
+            mShineAnimator = ViewUtil.animateShine(mLockBtn);
         } else {
-            mLockBtn.setAnimation(null);
+            if (mShineAnimator != null) {
+                mShineAnimator.end();
+                mShineAnimator = null;
+            }
         }
     }
 

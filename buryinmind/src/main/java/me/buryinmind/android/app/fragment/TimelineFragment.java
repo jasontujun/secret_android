@@ -6,11 +6,14 @@ import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -20,7 +23,6 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.daimajia.swipe.SimpleSwipeListener;
 import com.daimajia.swipe.SwipeLayout;
-import com.tj.xengine.android.data.listener.XHandlerIdDataSourceListener;
 import com.tj.xengine.android.network.http.XAsyncHttp;
 import com.tj.xengine.android.network.http.handler.XJsonArrayHandler;
 import com.tj.xengine.android.network.http.handler.XJsonObjectHandler;
@@ -63,6 +65,7 @@ public class TimelineFragment extends XFragment {
 
     private static final String TAG = "BIM_MainActivity";
     public static final int REFRESH_EXPAND = 11;
+    public static final int REFRESH_COLLAPSE = 12;
     public static final int REFRESH_SET_BIRTHDAY = 21;
     public static final int REFRESH_ADD_MEMORY = 31;
 
@@ -80,38 +83,6 @@ public class TimelineFragment extends XFragment {
         // register data listener
         mMemorySource = (XListIdDataSourceImpl<Memory>)
                 XDefaultDataRepo.getInstance().getSource(MyApplication.SOURCE_MEMORY);
-        mMemorySource.registerListener(new XHandlerIdDataSourceListener<Memory>() {
-            @Override
-            public void onReplaceInUI(List<Memory> list, List<Memory> list1) {
-            }
-
-            @Override
-            public void onChangeInUI() {
-            }
-
-            @Override
-            public void onAddInUI(Memory memory) {
-                int pos = mMemorySource.getIndexById(memory.mid);
-                mAdapter.addData(pos, memory);
-                mTimelineView.scrollToPosition(pos + 1);
-            }
-
-
-            @Override
-            public void onAddAllInUI(List<Memory> list) {
-                mAdapter.setData(mMemorySource.copyAll());
-            }
-
-            @Override
-            public void onDeleteInUI(Memory memory) {
-                mAdapter.deleteData(memory);
-            }
-
-            @Override
-            public void onDeleteAllInUI(List<Memory> list) {
-                mAdapter.setData(mMemorySource.copyAll());
-            }
-        });
         // init list adapter
         mAdapter = new TimelineAdapter(mMemorySource.copyAll());
         // 在onCreate时请求数据，可以避免fragment切换时过于频繁请求
@@ -156,6 +127,29 @@ public class TimelineFragment extends XFragment {
         return rootView;
     }
 
+    public void addMemory(final Memory memory) {
+        if (memory == null)
+            return;
+        mTimelineView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mMemorySource.add(memory);
+                mMemorySource.sort(Memory.comparator);
+                int index = mMemorySource.indexOf(memory);
+                mAdapter.addData(index, memory);
+                // 闪烁动画提示
+                mAdapter.addAnimateItem(memory, ViewUtil.animateShine(5),
+                        R.id.timeline_node_swipe_layout);
+                // 滚动到刚添加的item处
+                if (index > 0) {
+                    notifyRefresh(REFRESH_COLLAPSE, null);
+                }
+                mTimelineView.smoothScrollToPosition(index + 1);
+                mAdapter.notifyItemChanged(index + 1);
+            }
+        }, 50);
+    }
+
     private void requestMemoryList() {
         if (mWaiting)
             return;
@@ -193,6 +187,7 @@ public class TimelineFragment extends XFragment {
                         if (memories != null && memories.size() > 0) {
                             mMemorySource.addAll(memories);
                             mMemorySource.sort(Memory.comparator);
+                            mAdapter.setData(mMemorySource.copyAll());
                         }
                         // 获取待接收列表
                         getMemoryGift();
@@ -200,21 +195,30 @@ public class TimelineFragment extends XFragment {
                 }));
     }
 
-    private void deleteMemory(final Memory memory) {
+    private boolean deleteMemory(final Memory memory) {
+        if (mWaiting)
+            return false;
+        mWaiting = true;
+        mAdapter.addLoadingItem(memory);
         putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.deleteMemory(memory.mid),
                 new XAsyncHttp.Listener() {
                     @Override
-                    public void onCancelled() {}
+                    public void onCancelled() {
+                        mWaiting = false;
+                        mAdapter.removeLoadingItem(memory);
+                    }
 
                     @Override
                     public void onNetworkError() {
+                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
@@ -222,10 +226,13 @@ public class TimelineFragment extends XFragment {
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, Object obj) {
                         XLog.d(TAG, "deleteMemory onFinishSuccess()! mid=" + memory.mid);
+                        mWaiting = false;
                         mMemorySource.deleteById(memory.mid);
+                        mAdapter.deleteData(memory);
                     }
                 }
         ));
+        return true;
     }
 
     private void getMemoryGift() {
@@ -262,7 +269,7 @@ public class TimelineFragment extends XFragment {
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
-                        List<Memory> inMemories = new ArrayList<Memory>();
+                        final List<Memory> inMemories = new ArrayList<Memory>();
                         if (paMemories != null && paMemories.size() > 0) {
                             inMemories.addAll(paMemories);
                         }
@@ -272,34 +279,61 @@ public class TimelineFragment extends XFragment {
                         if (inMemories.size() > 0) {
                             mMemorySource.addAll(inMemories);
                             mMemorySource.sort(Memory.comparator);
+                            mAdapter.setData(mMemorySource.copyAll());
+                            // 闪烁动画提示
+                            for (Memory m : inMemories) {
+                                mAdapter.addAnimateItem(m, ViewUtil.animateShine(5),
+                                        R.id.timeline_node_swipe_layout);
+                            }
+                            // 滚动到第一个GiftMemory
+                            mTimelineView.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    int index = mMemorySource.indexOf(inMemories.get(0));
+                                    if (index > 0) {
+                                        notifyRefresh(REFRESH_COLLAPSE, null);
+                                    }
+                                    mTimelineView.smoothScrollToPosition(index + 1);
+                                    mAdapter.notifyItemChanged(index + 1);
+                                }
+                            }, 50);
                         }
                     }
                 }));
     }
 
-    private void receiveMemory(final Memory memory, String gid, String answer, final Runnable postExecutor) {
+    private boolean receiveMemory(final Memory memory, String gid, String answer) {
+        if (mWaiting)
+            return false;
+        mWaiting = true;
+        mAdapter.addLoadingItem(memory);
         putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.receiveMemory(gid, answer),
                 new XJsonObjectHandler(),
                 new XAsyncHttp.Listener<JSONObject>() {
                     @Override
                     public void onCancelled() {
+                        mWaiting = false;
+                        mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onNetworkError() {
+                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, JSONObject jo) {
+                        mWaiting = false;
                         try {
                             memory.mid = jo.getString("mid");
                             memory.inGift = null;
@@ -307,42 +341,54 @@ public class TimelineFragment extends XFragment {
                                     .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
                             memory.ownerId = user.uid;
                             memory.ownerName = user.name;
+                            mAdapter.addAnimateItem(memory, ViewUtil.animateScale(5.0f, 50f, 50f, null),
+                                    R.id.timeline_node_stamp);
                             mAdapter.removeLoadingItem(memory);
-                            if (postExecutor != null) {
-                                postExecutor.run();
-                            }
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
                     }
                 }));
+        return true;
     }
 
-    private void rejectMemory(final Memory memory, String gid) {
+    private boolean rejectMemory(final Memory memory, String gid) {
+        if (mWaiting)
+            return false;
+        mWaiting = true;
+        mAdapter.addLoadingItem(memory);
         putAsyncTask(MyApplication.getAsyncHttp().execute(
                 ApiUtil.rejectMemory(gid),
                 new XAsyncHttp.Listener() {
                     @Override
-                    public void onCancelled() {}
+                    public void onCancelled() {
+                        mWaiting = false;
+                        mAdapter.removeLoadingItem(memory);
+                    }
 
                     @Override
                     public void onNetworkError() {
+                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_network, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishError(XHttpResponse xHttpResponse) {
+                        mWaiting = false;
                         Toast.makeText(getActivity(), R.string.error_api_return_failed, Toast.LENGTH_SHORT).show();
                         mAdapter.removeLoadingItem(memory);
                     }
 
                     @Override
                     public void onFinishSuccess(XHttpResponse xHttpResponse, Object o) {
+                        mWaiting = false;
                         mAdapter.removeLoadingItem(memory);
                         mMemorySource.deleteById(memory.mid);
+                        mAdapter.deleteData(memory);
                     }
                 }));
+        return true;
     }
 
     private void gotoDetail(Memory memory) {
@@ -357,28 +403,6 @@ public class TimelineFragment extends XFragment {
         return mListTop;
     }
 
-    public void needScrollTo(final int pos) {
-        if (!mListTop) {
-            mTimelineView.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mTimelineView.smoothScrollToPosition(pos);
-                }
-            }, 50);
-        }
-    }
-
-    public void needScrollToTop() {
-        if (!mListTop) {
-            mTimelineView.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mTimelineView.smoothScrollToPosition(0);
-                }
-            }, 50);
-        }
-    }
-
 
     private class TimelineAdapter extends RecyclerView.Adapter<XViewHolder> {
 
@@ -386,20 +410,21 @@ public class TimelineFragment extends XFragment {
         private static final int TYPE_FOOTER = 2;
         private static final int TYPE_NODE = 3;
 
-        private static final String KEY_LISTENER = "swipeLayoutListener";
-
         private Map<Integer, Memory> mAges;
         private List<Memory> mItems;
         private List<Memory> mLoadingItems;
+        private Map<Memory, Pair<Animation, Integer>> mItemAnimations;
 
         public TimelineAdapter(List<Memory> items) {
             mAges = new HashMap<Integer, Memory>();
             mLoadingItems = new ArrayList<Memory>();
+            mItemAnimations = new HashMap<Memory, Pair<Animation, Integer>>();
             setData(items);
         }
 
         public void setData(final List<Memory> memories) {
             mItems = memories;
+            mItemAnimations.clear();
             mLoadingItems.clear();
             mAges.clear();
             for (Memory memory : memories) {
@@ -432,6 +457,7 @@ public class TimelineFragment extends XFragment {
             }
             mItems.remove(memory);
             mLoadingItems.remove(memory);
+            mItemAnimations.remove(memory);
             if (memory.equals(mAges.get(memory.age))) {
                 boolean needRemove = true;
                 for (Memory item : mItems) {
@@ -447,6 +473,14 @@ public class TimelineFragment extends XFragment {
             }
             notifyItemRemoved(pos + 1);
             notifyItemRangeChanged(pos + 1, Math.min(2, mItems.size() - (pos + 1)));
+        }
+
+        public void addAnimateItem(Memory memory, Animation anim, int viewId) {
+            int pos = mItems.indexOf(memory);
+            if (pos == -1) {
+                return;
+            }
+            mItemAnimations.put(memory, new Pair<Animation, Integer>(anim, viewId));
         }
 
         public void addLoadingItem(Memory memory) {
@@ -587,9 +621,12 @@ public class TimelineFragment extends XFragment {
                                         public void onDone(Object... result) {
                                             confirm = (boolean) result[0];
                                             if (confirm) {
-                                                addLoadingItem(item);
                                                 // 删除memory
-                                                deleteMemory(item);
+                                                if(deleteMemory(item)) {
+                                                } else {
+                                                    Toast.makeText(getActivity(), R.string.error_loading,
+                                                            Toast.LENGTH_SHORT).show();
+                                                }
                                             }
                                         }
 
@@ -622,14 +659,23 @@ public class TimelineFragment extends XFragment {
                     } else {
                         memoryImage.setImageResource(R.color.darkGray);
                     }
-                    // 是自己的或已接收的回忆
                     final SwipeLayout swipeLayout = (SwipeLayout) holder.getView(R.id.timeline_node_swipe_layout);
-                    swipeLayout.setVisibility(View.VISIBLE);
+                    if (swipeLayout.getOpenStatus() != SwipeLayout.Status.Close) {
+                        XLog.d(TAG, "swipeLayout force close!!pos=" + position);
+                        swipeLayout.close(false, false);
+                    }
+                    // 是自己的或已接收的回忆
                     if (item.inGift == null) {
                         holder.getView(R.id.timeline_node_lock).setVisibility(View.GONE);
                         holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.GONE);
+                        if (!item.ownerId.equals(item.authorId)) {
+                            // 是已接收回忆，显示已接收邮戳
+                            holder.getView(R.id.timeline_node_stamp).setVisibility(View.VISIBLE);
+                        } else {
+                            holder.getView(R.id.timeline_node_stamp).setVisibility(View.GONE);
+                        }
+                        particleLayout.setEnable(true);
                         swipeLayout.setSwipeEnabled(false);
-                        swipeLayout.removeSwipeListener(holder.getTag(KEY_LISTENER, MySwipeListener.class));
                         holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
                                 new View.OnClickListener() {
                                     @Override
@@ -638,77 +684,65 @@ public class TimelineFragment extends XFragment {
                                     }
                                 });
                     }
-                    // 是未接收的回忆
+                    // 是待接收的回忆
                     else {
+                        holder.getView(R.id.timeline_node_lock).setVisibility(View.VISIBLE);
+                        holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.VISIBLE);
+                        holder.getView(R.id.timeline_node_stamp).setVisibility(View.GONE);
+                        // 设置滑动图层
+                        particleLayout.setEnable(false);
+                        swipeLayout.setSwipeEnabled(true);
+                        holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
+                                new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        // 显示问题
+                                        swipeLayout.toggle(true);
+                                    }
+                                });
                         // 没有设锁的回忆
                         if (XStringUtil.isEmpty(item.inGift.question)) {
-                            holder.getView(R.id.timeline_node_lock).setVisibility(View.GONE);
-                            holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.GONE);
-                            swipeLayout.setSwipeEnabled(false);
-                            swipeLayout.removeSwipeListener(holder.getTag(KEY_LISTENER, MySwipeListener.class));
-                            holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
-                                    new View.OnClickListener() {
+                            holder.getView(R.id.timeline_node_lock, ImageView.class)
+                                    .setImageResource(R.drawable.icon_lock_open_black);
+                            holder.getView(R.id.timeline_node_question).setVisibility(View.GONE);
+                            holder.getView(R.id.timeline_node_answer_input_layout).setVisibility(View.GONE);
+                            holder.getView(R.id.timeline_node_unlock_btn, Button.class).setText(R.string.button_take);
+                            holder.getView(R.id.timeline_node_ignore_btn, Button.class).setText(R.string.button_reject);
+                            holder.getView(R.id.timeline_node_unlock_btn)
+                                    .setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            addLoadingItem(item);
                                             // 第一次点击进去表示解锁并接收Memory,通知服务器
-                                            receiveMemory(item, item.inGift.gid, null,
-                                                    new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                                                            gotoDetail(item);
-                                                        }
-                                                    });
+                                            if (receiveMemory(item, item.inGift.gid, null)) {
+                                                swipeLayout.toggle(true);
+                                            } else {
+                                                Toast.makeText(getActivity(), R.string.error_loading,
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    });
+                            holder.getView(R.id.timeline_node_ignore_btn)
+                                    .setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            // 拒绝此Memory
+                                            if (rejectMemory(item, item.inGift.gid)) {
+                                                swipeLayout.toggle(true);
+                                            } else {
+                                                Toast.makeText(getActivity(), R.string.error_loading,
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
                                         }
                                     });
                         }
                         // 有设锁的回忆
                         else {
-                            holder.getView(R.id.timeline_node_lock).setVisibility(View.VISIBLE);
-                            holder.getView(R.id.timeline_node_unlock_layout).setVisibility(View.VISIBLE);
-                            swipeLayout.setSwipeEnabled(true);
-                            // 设置滑动图层
-                            MySwipeListener sListener = holder.getTag(KEY_LISTENER, MySwipeListener.class);
-                            if (sListener == null) {
-                                sListener = new MySwipeListener(particleLayout);
-                            } else {
-                                sListener.setParticleLayout(particleLayout);
-                            }
-                            swipeLayout.addSwipeListener(sListener);
-                            holder.getView(R.id.timeline_node_card_layout).setOnClickListener(
-                                    new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            // 显示问题
-                                            swipeLayout.toggle(true);
-                                        }
-                                    });
-                            final EditText answerInput = (EditText) holder.getView(R.id.timeline_node_answer_input);
+                            holder.getView(R.id.timeline_node_lock, ImageView.class)
+                                    .setImageResource(R.drawable.icon_lock_black);
+                            holder.getView(R.id.timeline_node_question).setVisibility(View.VISIBLE);
                             holder.getView(R.id.timeline_node_question, TextView.class).setText(item.inGift.question);
-                            holder.getView(R.id.timeline_node_unlock_btn).setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    String answer = answerInput.getText().toString().trim();
-                                    if (XStringUtil.isEmpty(answer)) {
-                                        answerInput.setError(getString(R.string.error_field_required));
-                                        answerInput.requestFocus();
-                                        return;
-                                    }
-                                    swipeLayout.toggle(true);
-                                    addLoadingItem(item);
-                                    // 解锁并接收Memory
-                                    receiveMemory(item, item.inGift.gid, answer, null);
-                                }
-                            });
-                            holder.getView(R.id.timeline_node_ignore_btn).setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    // 拒绝此Memory
-                                    swipeLayout.toggle(true);
-                                    addLoadingItem(item);
-                                    rejectMemory(item, item.inGift.gid);
-                                }
-                            });
+                            holder.getView(R.id.timeline_node_answer_input_layout).setVisibility(View.VISIBLE);
+                            final EditText answerInput = (EditText) holder.getView(R.id.timeline_node_answer_input);
                             answerInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
                                 @Override
                                 public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -720,7 +754,56 @@ public class TimelineFragment extends XFragment {
                                     return false;
                                 }
                             });
+                            holder.getView(R.id.timeline_node_unlock_btn, Button.class).setText(R.string.button_unlock);
+                            holder.getView(R.id.timeline_node_ignore_btn, Button.class).setText(R.string.button_ignore);
+                            holder.getView(R.id.timeline_node_unlock_btn)
+                                    .setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            String answer = answerInput.getText().toString().trim();
+                                            if (XStringUtil.isEmpty(answer)) {
+                                                answerInput.setError(getString(R.string.error_field_required));
+                                                answerInput.requestFocus();
+                                                return;
+                                            }
+                                            // 解锁并接收Memory
+                                            if (receiveMemory(item, item.inGift.gid, answer)) {
+                                                swipeLayout.toggle(true);
+                                            } else {
+                                                Toast.makeText(getActivity(), R.string.error_loading,
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    });
+                            holder.getView(R.id.timeline_node_ignore_btn)
+                                    .setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            // 拒绝此Memory
+                                            swipeLayout.toggle(true);
+                                            if (rejectMemory(item, item.inGift.gid)) {
+                                                swipeLayout.toggle(true);
+                                            } else {
+                                                Toast.makeText(getActivity(), R.string.error_loading,
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    });
                         }
+                    }
+                    // 播放动画动画
+                    if (mItemAnimations.containsKey(item)) {
+                        XLog.d(TAG, "swipeLayout animate!!pos=" + position);
+                        Pair<Animation, Integer> param = mItemAnimations.remove(item);
+                        final Animation animation = param.first;
+                        final View view = holder.getView(param.second);
+                        view.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                XLog.d(TAG, "swipeLayout real animate!!pos=" + position);
+                                view.startAnimation(animation);
+                            }
+                        }, 50);
                     }
                 }
             }
@@ -731,33 +814,4 @@ public class TimelineFragment extends XFragment {
             return mItems.size() + 2;
         }
     }
-
-
-    private class MySwipeListener extends SimpleSwipeListener {
-        XParticleLayout pLayout;
-
-        public MySwipeListener(XParticleLayout pLayout) {
-            this.pLayout = pLayout;
-        }
-
-        public void setParticleLayout(XParticleLayout pLayout) {
-            this.pLayout = pLayout;
-        }
-
-        @Override
-        public void onOpen(SwipeLayout layout) {
-            XLog.d(TAG, "滑开图层，禁止粒子效果");
-            if (pLayout != null) {
-                pLayout.setEnable(false);
-            }
-        }
-
-        @Override
-        public void onClose(SwipeLayout layout) {
-            XLog.d(TAG, "隐藏图层，恢复粒子效果");
-            if (pLayout != null) {
-                pLayout.setEnable(true);
-            }
-        }
-    };
 }

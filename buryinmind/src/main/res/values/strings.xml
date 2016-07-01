@@ -28,7 +28,9 @@
     <string name="button_add_secret">Add</string>
     <string name="button_post">Post</string>
     <string name="button_unlock">Unlock</string>
-    <string name="button_ignore">None of my business</string>
+    <string name="button_ignore">Ignore</string>
+    <string name="button_take">Received, thanks!</string>
+    <string name="button_reject">Sorry, rejected</string>
 
     <string name="error_network">something wrong with your network</string>
     <string name="error_exception">exception!</string>
