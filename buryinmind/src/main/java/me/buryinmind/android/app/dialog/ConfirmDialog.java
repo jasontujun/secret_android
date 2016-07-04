@@ -18,7 +18,7 @@ import me.buryinmind.android.app.R;
  */
 public class ConfirmDialog extends DialogFragment {
 
-    public static final String TAG = "ConfirmDialog";
+    public static final String TAG = ConfirmDialog.class.getSimpleName();
     private String mTxt;
     private DialogListener mListener;
 
@@ -41,7 +41,7 @@ public class ConfirmDialog extends DialogFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.dialog_confirm, container);
-        TextView confirmTxt = (TextView) rootView.findViewById(R.id.dialog_confirm_txt);
+        TextView confirmTxt = (TextView) rootView.findViewById(R.id.dialog_txt);
         Button yesBtn = (Button) rootView.findViewById(R.id.dialog_confirm_yes_btn);
         Button noBtn = (Button) rootView.findViewById(R.id.dialog_confirm_no_btn);
         confirmTxt.setText(mTxt);

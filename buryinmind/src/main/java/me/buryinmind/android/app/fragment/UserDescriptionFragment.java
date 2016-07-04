@@ -73,14 +73,14 @@ public class UserDescriptionFragment extends XFragment {
         ViewUtil.hideInputMethod(getActivity());
         List<String> des = mDescriptionAdapter.getData();
         if (des.size() < GlobalSource.DES_MIN_SIZE) {
-            Toast.makeText(getActivity(), String.format(getResources().getString
-                            (R.string.error_insufficient_des), GlobalSource.DES_MIN_SIZE),
+            Toast.makeText(getActivity(), getResources().getString
+                            (R.string.error_insufficient_des, GlobalSource.DES_MIN_SIZE),
                     Toast.LENGTH_SHORT).show();
             ViewUtil.animateShake(mDescriptionList);
             return;
         } else if (des.size() > GlobalSource.DES_MAX_SIZE){
-            Toast.makeText(getActivity(), String.format(getResources().getString
-                            (R.string.error_excessive_des), GlobalSource.DES_MAX_SIZE),
+            Toast.makeText(getActivity(), getResources().getString
+                            (R.string.error_excessive_des, GlobalSource.DES_MAX_SIZE),
                     Toast.LENGTH_SHORT).show();
             ViewUtil.animateShake(mDescriptionList);
             return;
@@ -94,8 +94,10 @@ public class UserDescriptionFragment extends XFragment {
             return;
         mWaiting = true;
         notifyLoading(true);
+        User newInfo = new User();
+        newInfo.descriptions = descriptions;
         putAsyncTask(MyApplication.getAsyncHttp().execute(
-                ApiUtil.updateDescription(descriptions),
+                ApiUtil.updateUser(newInfo),
                 new XAsyncHttp.Listener() {
                     @Override
                     public void onCancelled() {

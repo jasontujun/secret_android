@@ -54,7 +54,7 @@ public abstract class ApiUtil {
             request.addStringParam("des", JsonUtil.List2JsonString(des));
         }
         return request;
-    };
+    }
 
     public static XHttpRequest searchActiveUser(String name, List<String> des) {
         XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/users/search")
@@ -65,7 +65,7 @@ public abstract class ApiUtil {
             request.addStringParam("des", JsonUtil.List2JsonString(des));
         }
         return request;
-    };
+    }
 
     public static XHttpRequest searchAllUser(String name, List<String> des) {
         XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/users/all/search")
@@ -76,7 +76,7 @@ public abstract class ApiUtil {
             request.addStringParam("des", JsonUtil.List2JsonString(des));
         }
         return request;
-    };
+    }
 
     public static XHttpRequest getFriendList() {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/friends")
@@ -100,7 +100,7 @@ public abstract class ApiUtil {
                 .addStringParam("gid", gid)
                 .addStringParam("answer", CryptoUtil.toMd5(CryptoUtil.toMd5(answer), salt))
                 .addStringParam("sa", salt);
-    };
+    }
 
     public static XHttpRequest activateUser(String uid, String gid, String password,
                                             String email, String answer) {
@@ -114,7 +114,7 @@ public abstract class ApiUtil {
                 .addStringParam("password", CryptoUtil.toMd5(password))
                 .addStringParam("answer", CryptoUtil.toMd5(CryptoUtil.toMd5(answer), salt))
                 .addStringParam("sa", salt);
-    };
+    }
 
     public static XHttpRequest loginUser(String uid, String password) {
         String salt = "" + System.currentTimeMillis();
@@ -124,7 +124,7 @@ public abstract class ApiUtil {
                 .addStringParam("uid", uid)
                 .addStringParam("password", CryptoUtil.toMd5(CryptoUtil.toMd5(CryptoUtil.toMd5(password), uid), salt))
                 .addStringParam("sa", salt);
-    };
+    }
 
     public static XHttpRequest logoutUser() {
         return MyApplication.getHttp().newRequest(DOMAIN + "/users/logout")
@@ -138,32 +138,30 @@ public abstract class ApiUtil {
                 .setMethod(XHttpRequest.Method.POST)
                 .addStringParam("uid", uid)
                 .addStringParam("token", token);
-    };
-
-    public static XHttpRequest updateBornTime(long bornTime) {
-        return MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
-                .setMethod(XHttpRequest.Method.POST)
-                .addStringParam("uid", getLocalUserId())
-                .addStringParam("token", getLocalToken())
-                .addStringParam("btime", String.valueOf(bornTime));
     }
 
-    public static XHttpRequest updateDescription(List<String> des) {
-        return MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
+    public static XHttpRequest updateUser(User userInfo) {
+        XHttpRequest request = MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
                 .setMethod(XHttpRequest.Method.POST)
                 .setCharset("UTF-8")
                 .addStringParam("uid", getLocalUserId())
-                .addStringParam("token", getLocalToken())
-                .addStringParam("des", JsonUtil.List2JsonString(des));
-    }
-
-    public static XHttpRequest updateUserHeritage(String heritage) {
-        return MyApplication.getHttp().newRequest(DOMAIN + "/users/update")
-                .setMethod(XHttpRequest.Method.POST)
-                .setCharset("UTF-8")
-                .addStringParam("uid", getLocalUserId())
-                .addStringParam("token", getLocalToken())
-                .addStringParam("heritage", heritage);
+                .addStringParam("token", getLocalToken());
+        if (userInfo.bornTime != null) {
+            request.addStringParam("btime", String.valueOf(userInfo.bornTime));
+        }
+        if (userInfo.descriptions != null && userInfo.descriptions.size() > 0) {
+            request.addStringParam("des", JsonUtil.List2JsonString(userInfo.descriptions));
+        }
+        if (!XStringUtil.isEmpty(userInfo.email)) {
+            request.addStringParam("email", String.valueOf(userInfo.bornTime));
+        }
+        if (!XStringUtil.isEmpty(userInfo.heritage)) {
+            request.addStringParam("heritage", userInfo.heritage);
+        }
+        if (userInfo.threshold != 0) {
+            request.addStringParam("dt", String.valueOf(userInfo.threshold));
+        }
+        return request;
     }
 
     public static XHttpRequest updateMemoryInfo(String mid, String name,

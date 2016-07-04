@@ -568,8 +568,7 @@ public class TimelineFragment extends XFragment {
                 if (!user.uid.equals(item.authorId)) {
                     holder.getView(R.id.timeline_sender_name).setVisibility(View.VISIBLE);
                     holder.getView(R.id.timeline_sender_name, TextView.class).setText(
-                            String.format(getResources().getString(R.string.info_memory_sender),
-                                    item.authorName));
+                            getResources().getString(R.string.info_memory_sender, item.authorName));
                     holder.getView(R.id.timeline_sender_head).setVisibility(View.VISIBLE);
                     Glide.with(TimelineFragment.this)
                             .load(ApiUtil.getIdUrl(item.authorId))
@@ -611,7 +610,7 @@ public class TimelineFragment extends XFragment {
                             final User user = ((GlobalSource) XDefaultDataRepo.getInstance()
                                     .getSource(MyApplication.SOURCE_GLOBAL)).getUser();
                             ConfirmDialog.newInstance(
-                                    String.format(getResources().getString(R.string.info_delete_memory),
+                                    getResources().getString(R.string.info_delete_memory,
                                             TimeUtil.calculateAge(user.bornTime, item.happenStartTime),
                                             item.name),
                                     new DialogListener() {

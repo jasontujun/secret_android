@@ -154,8 +154,8 @@ public class ImageSelectorActivity extends AppCompatActivity {
         mSelectedFolder = folder;
         mGridView.setAdapter(new ImageAdapter(folder.getImages()));
         mChooseDirBtn.setText(folder.getName());
-        mChooseImageDoneBtn.setText(String.format(getResources()
-                .getString(R.string.info_choose_image_done), mSelectedImages.size()));
+        mChooseImageDoneBtn.setText(getResources().getString
+                (R.string.info_choose_image_done, mSelectedImages.size()));
     }
 
     /**
@@ -337,15 +337,15 @@ public class ImageSelectorActivity extends AppCompatActivity {
                         mSelectedImages.remove(item);
                         mSelect.setImageResource(R.drawable.icon_check_box_blank_white);
                         mImageView.setColorFilter(null);
-                        mChooseImageDoneBtn.setText(String.format(getResources()
-                                .getString(R.string.info_choose_image_done), mSelectedImages.size()));
+                        mChooseImageDoneBtn.setText(getResources()
+                                .getString(R.string.info_choose_image_done, mSelectedImages.size()));
                     } else {
                         // 未选择该图片
                         mSelectedImages.add(item);
                         mSelect.setImageResource(R.drawable.icon_check_box_white);
                         mImageView.setColorFilter(Color.parseColor("#77000000"));
-                        mChooseImageDoneBtn.setText(String.format(getResources()
-                                .getString(R.string.info_choose_image_done), mSelectedImages.size()));
+                        mChooseImageDoneBtn.setText(getResources()
+                                .getString(R.string.info_choose_image_done, mSelectedImages.size()));
                     }
 
                 }

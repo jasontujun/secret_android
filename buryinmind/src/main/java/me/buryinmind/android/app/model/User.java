@@ -42,6 +42,8 @@ public class User implements Serializable {
 
     public List<String> descriptions;
 
+    public String email;
+
     public int state;
 
     public Long bornTime;// 如果用户没有设置生日，该值为null
@@ -49,6 +51,8 @@ public class User implements Serializable {
     public long createTime;
 
     public String heritage;
+
+    public long threshold;
 
     // 本地属性.标识此用户是否是好友
     public boolean isFriend;
@@ -71,6 +75,9 @@ public class User implements Serializable {
                 }
             }
             user.state = jo.getInt("state");
+            if (jo.has("email") && !jo.isNull("email")) {
+                user.email = jo.getString("email");
+            }
             if (jo.has("born_time") && !jo.isNull("born_time")) {
                 user.bornTime = jo.getLong("born_time");
             }
@@ -79,6 +86,9 @@ public class User implements Serializable {
             }
             if (jo.has("heritage") && !jo.isNull("heritage")) {
                 user.heritage = jo.getString("heritage");
+            }
+            if (jo.has("death_threshold") && !jo.isNull("death_threshold")) {
+                user.threshold = jo.getLong("death_threshold");
             }
             return user;
         } catch (JSONException e) {

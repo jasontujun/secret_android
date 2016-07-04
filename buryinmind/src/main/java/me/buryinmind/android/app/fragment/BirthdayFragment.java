@@ -59,6 +59,11 @@ public class BirthdayFragment extends XFragment {
     }
 
     public void confirm() {
+        if (mWaiting) {
+            Toast.makeText(getActivity(), R.string.error_loading, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        mWaiting = true;
         int year = mDatePicker.getYear();
         int month = mDatePicker.getMonth();
         int day = mDatePicker.getDayOfMonth();
@@ -66,17 +71,11 @@ public class BirthdayFragment extends XFragment {
         birthCal.set(year, month - 1, day);
         // 统一改成GMT时区,再上传服务器
         final long bornTime = TimeUtil.changeTimeZoneToUTC(birthCal.getTimeInMillis());
-        updateBornTime(bornTime);
-    }
-
-
-    private void updateBornTime(final long bornTime) {
-        if (mWaiting)
-            return;
-        mWaiting = true;
         notifyLoading(true);
+        User newInfo = new User();
+        newInfo.bornTime = bornTime;
         putAsyncTask(MyApplication.getAsyncHttp().execute(
-                ApiUtil.updateBornTime(bornTime),
+                ApiUtil.updateUser(newInfo),
                 new XAsyncHttp.Listener() {
                     @Override
                     public void onCancelled() {

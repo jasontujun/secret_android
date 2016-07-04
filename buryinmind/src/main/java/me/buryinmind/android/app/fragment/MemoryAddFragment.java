@@ -156,10 +156,10 @@ public class MemoryAddFragment extends XFragment {
 
     private void refreshHappenTime() {
         if (mHappenTime == null) {
-            mHappenTimeView.setText(String.format(getResources()
-                    .getString(R.string.info_memory_time), "XXXX.XX.XX"));
+            mHappenTimeView.setText(getResources()
+                    .getString(R.string.info_memory_time, "XXXX.XX.XX"));
         } else {
-            mHappenTimeView.setText(String.format(getResources().getString(R.string.info_memory_time),
+            mHappenTimeView.setText(getResources().getString(R.string.info_memory_time,
                     XStringUtil.calendar2str(TimeUtil.getCalendar(mHappenTime[0]), ".")));
         }
     }

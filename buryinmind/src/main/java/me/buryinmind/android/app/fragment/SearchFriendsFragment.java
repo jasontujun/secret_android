@@ -427,7 +427,7 @@ public class SearchFriendsFragment extends XFragment {
             int type = getItemViewType(position);
             if (type == TYPE_NEWER) {
                 holder.getView(R.id.new_user_prompt_txt, TextView.class).setText(
-                        String.format(getResources().getString(R.string.info_post_new_user), newUser.name));
+                        getResources().getString(R.string.info_post_new_user, newUser.name));
                 holder.itemView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -439,15 +439,15 @@ public class SearchFriendsFragment extends XFragment {
                         }
                         if (newUser.descriptions == null
                                 || newUser.descriptions.size() < GlobalSource.DES_MIN_SIZE) {
-                            Toast.makeText(getActivity(), String.format(getResources().getString
-                                            (R.string.error_insufficient_des), GlobalSource.DES_MIN_SIZE),
+                            Toast.makeText(getActivity(), getResources().getString
+                                            (R.string.error_insufficient_des, GlobalSource.DES_MIN_SIZE),
                                     Toast.LENGTH_SHORT).show();
                             ViewUtil.animateShake(mDescriptionListLayout);
                             return;
                         }
                         if (newUser.descriptions.size() > GlobalSource.DES_MAX_SIZE) {
-                            Toast.makeText(getActivity(), String.format(getResources().getString
-                                            (R.string.error_excessive_des), GlobalSource.DES_MAX_SIZE),
+                            Toast.makeText(getActivity(), getResources().getString
+                                            (R.string.error_excessive_des, GlobalSource.DES_MAX_SIZE),
                                     Toast.LENGTH_SHORT).show();
                             ViewUtil.animateShake(mDescriptionListLayout);
                             return;

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="10dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:textSize="@dimen/text_size_small"
+        android:textColor="@color/gray"
+        android:text="@string/info_set_will"/>
+    <TextView
+        android:id="@+id/will_choice_public"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:textSize="@dimen/text_size_middle"
+        android:textColor="@color/gray"
+        android:singleLine="true"
+        android:background="@color/transparentGray"
+        android:text="@string/button_will_public"/>
+    <TextView
+        android:id="@+id/will_choice_destroy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:textSize="@dimen/text_size_middle"
+        android:textColor="@color/gray"
+        android:singleLine="true"
+        android:background="@color/transparentGray"
+        android:text="@string/button_will_destroy"/>
+    <TextView
+        android:id="@+id/will_choice_extend"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:textSize="@dimen/text_size_middle"
+        android:textColor="@color/gray"
+        android:singleLine="true"
+        android:background="@color/transparentGray"
+        tools:text="@string/button_will_extend"/>
+
+    <!-- 死亡检测时长 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:textSize="@dimen/text_size_small"
+        android:textColor="@color/gray"
+        android:text="@string/info_set_death_wait"/>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp">
+        <TextView
+            android:id="@+id/death_check_min"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/lightGray"
+            tools:text="1个月"/>
+        <TextView
+            android:id="@+id/death_check_max"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/lightGray"
+            tools:text="10年"/>
+    </RelativeLayout>
+    <!-- 滚动条 -->
+    <SeekBar
+        android:id="@+id/death_check"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:thumb="@drawable/icon_seekbar"
+        android:progressDrawable="@drawable/bg_seekbar"/>
+    <!-- 当前滑动结果 -->
+    <me.buryinmind.android.app.uicontrol.XEmptyLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/death_check_current"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray"
+            tools:text="10年"/>
+    </me.buryinmind.android.app.uicontrol.XEmptyLayout>
+</LinearLayout>

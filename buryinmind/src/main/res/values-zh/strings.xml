@@ -22,6 +22,7 @@
     <string name="button_done">完成</string>
     <string name="button_yes">是</string>
     <string name="button_no">否</string>
+    <string name="button_will">遗嘱</string>
     <string name="button_settings">设置</string>
     <string name="button_logout">登出</string>
     <string name="button_next">下一步</string>
@@ -31,11 +32,15 @@
     <string name="button_ignore">忽略</string>
     <string name="button_take">收到，谢谢!</string>
     <string name="button_reject">抱歉，退回</string>
+    <string name="button_will_destroy">销毁回忆</string>
+    <string name="button_will_public">公开回忆</string>
+    <string name="button_will_extend">留给%1$s</string>
 
     <string name="error_network">网络有点问题哦</string>
     <string name="error_exception">出现异常!</string>
     <string name="error_field_required">必填哦</string>
     <string name="error_api_return_failed">请求失败!</string>
+    <string name="error_none">抱歉，没有数据</string>
     <string name="error_loading">正在加载，请稍后!</string>
     <string name="error_invalid_email">邮箱格式不正确!</string>
     <string name="error_invalid_name">名字太短了</string>
@@ -54,11 +59,14 @@
     <string name="info_press_back_again">再按一次退出程序</string>
     <string name="info_question">对你的问题:</string>
     <string name="info_about">对你的描述:</string>
-    <string name="info_activate_account">Ta们可能有和你的回忆，请选择一个并回答问题，以确认你们的关系:</string>
+    <string name="info_activate_account">你可能认识Ta们，请选择一个并回答问题，以确认你们的关系:</string>
     <string name="info_choose_account">可能有同名用户，选择最接近自己的:</string>
     <string name="info_account_none">抱歉，还没有此用户</string>
     <string name="info_set_birthday">请设置您的生日:</string>
-    <string name="info_set_description">请设置对自己的描述，便于你的小伙伴更容易找到你(比如你的小名，家乡，学校):</string>
+    <string name="info_set_head">请设置一个头像，让自己和别人不一样:</string>
+    <string name="info_set_will">请设置您的遗嘱(在系统判断您死后，如何处理您的回忆):</string>
+    <string name="info_set_death_wait">请设置死亡检测期限(超过此期限系统将认为您已死亡，并触发遗嘱):</string>
+    <string name="info_set_description">添加对自己的描述，便于你的小伙伴更容易找到你(比如你的小名，家乡，学校):</string>
     <string name="info_search_description">可以添加描述以便于更准确找到你的小伙伴(比如Ta的小名，家乡，学校):</string>
     <string name="info_timeline_header">开始的开始 &#8230;</string>
     <string name="info_timeline_footer">未完待续 &#8230;</string>
@@ -83,4 +91,8 @@
     <string name="info_post_lock_optional">可以设定一个问题，来锁住回忆</string>
     <string name="info_post_lock_required">由于接收者并不确定，必须添加一个问题，来锁住回忆，以免被陌生人误收</string>
     <string name="info_post_uneditable">回忆一旦寄送出去，将不能再修改，确定寄出?</string>
+    <string name="info_death_threshold_month">%1$d月</string>
+    <string name="info_death_threshold_year">%1$d年</string>
+    <string name="info_choose_heritage_people">请选择一个小伙伴作为您回忆的继承者:</string>
+
 </resources>

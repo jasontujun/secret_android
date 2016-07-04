@@ -22,6 +22,7 @@
     <string name="button_done">Done</string>
     <string name="button_yes">Yes</string>
     <string name="button_no">No</string>
+    <string name="button_will">Wills</string>
     <string name="button_settings">Settings</string>
     <string name="button_logout">Logout</string>
     <string name="button_next">Next</string>
@@ -31,11 +32,15 @@
     <string name="button_ignore">Ignore</string>
     <string name="button_take">Received, thanks!</string>
     <string name="button_reject">Sorry, rejected</string>
+    <string name="button_will_destroy">Destroy Memory</string>
+    <string name="button_will_public">Disclose Memory</string>
+    <string name="button_will_extend">Leave Memory to %1$s</string>
 
-    <string name="error_network">something wrong with your network</string>
-    <string name="error_exception">exception!</string>
+    <string name="error_network">Something wrong with your network</string>
+    <string name="error_exception">Exception!</string>
     <string name="error_field_required">Required</string>
-    <string name="error_api_return_failed">request failed!</string>
+    <string name="error_api_return_failed">Request failed!</string>
+    <string name="error_none">Sorry, no data.</string>
     <string name="error_loading">Loading, please wait!</string>
     <string name="error_invalid_email">Email format incorrect!</string>
     <string name="error_invalid_name">Name is too Short</string>
@@ -59,8 +64,12 @@
     <string name="info_choose_account">People may have the same name as yours,
         Please choose the closest one:</string>
     <string name="info_account_none">Sorry, No such user.</string>
-    <string name="info_gift_none">Sorry, No such user.</string>
     <string name="info_set_birthday">Please set your birthday:</string>
+    <string name="info_set_head">Please set your head, to make you different from others:</string>
+    <string name="info_set_will">Please set your wills
+        (how to handle the memory after the system judge your death):</string>
+    <string name="info_set_death_wait">Please set the duration of death detection
+        (the system will judge your death after this deadline，and trigger the wills):</string>
     <string name="info_set_description">Please describe yourself for easily discovered by your friend
         (such as your nickname, hometown, school):</string>
     <string name="info_search_description">Add some description to find your friend more accurately
@@ -88,5 +97,8 @@
     <string name="info_post_lock_required">Because of undefined receiver, you have to add a question
         to lock the memory to avoid being received in error by strangers</string>
     <string name="info_post_uneditable">Once post out, the memory will be uneditable, sure to post?</string>
+    <string name="info_death_threshold_month">%1$d Month</string>
+    <string name="info_death_threshold_year">%1$d Year</string>
+    <string name="info_choose_heritage_people">Please choose one of your friend to extend your memory:</string>
 
 </resources>

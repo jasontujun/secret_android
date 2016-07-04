@@ -156,7 +156,7 @@ public class MemoryDetailActivity extends XActivity {
             });
         }
         // init author and info
-        mMemoryTimeView.setText(String.format(getResources().getString(R.string.info_memory_time),
+        mMemoryTimeView.setText(getResources().getString(R.string.info_memory_time,
                 XStringUtil.calendar2str(TimeUtil.getCalendar(mMemory.happenStartTime), ".")));
         if (mMemory.editable) {
             mMemoryTimeView.setOnClickListener(new View.OnClickListener() {

@@ -33,6 +33,7 @@ import me.buryinmind.android.app.data.GlobalSource;
 import me.buryinmind.android.app.fragment.MemoryAddFragment;
 import me.buryinmind.android.app.fragment.BirthdayFragment;
 import me.buryinmind.android.app.fragment.UserDescriptionFragment;
+import me.buryinmind.android.app.fragment.WillFragment;
 import me.buryinmind.android.app.fragment.XBaseFragmentListener;
 import me.buryinmind.android.app.fragment.TimelineFragment;
 import me.buryinmind.android.app.model.Memory;
@@ -53,6 +54,7 @@ public class TimelineActivity extends XActivity {
     private BirthdayFragment mBirthDayFragment;
     private UserDescriptionFragment mEditDesFragment;
     private MemoryAddFragment mAddFragment;
+    private WillFragment mWillFragment;
 
     private View mProgressView;
     private View mContentView;
@@ -66,9 +68,10 @@ public class TimelineActivity extends XActivity {
     private View mAccountLine;
 
     private MenuItem mAddBtn;
-    private MenuItem mLogoutBtn;
     private MenuItem mNextBtn;
     private MenuItem mDoneBtn;
+    private MenuItem mWillBtn;
+    private MenuItem mLogoutBtn;
 
     private boolean mCollapsed = false;
     private boolean mWaiting = false;
@@ -160,13 +163,15 @@ public class TimelineActivity extends XActivity {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_timeline, menu);
         mAddBtn = menu.getItem(0);
-        mLogoutBtn = menu.getItem(1);
-        mNextBtn = menu.getItem(2);
-        mDoneBtn = menu.getItem(3);
+        mNextBtn = menu.getItem(1);
+        mDoneBtn = menu.getItem(2);
+        mWillBtn = menu.getItem(3);
+        mLogoutBtn = menu.getItem(4);
         mAddBtn.setVisible(false);
-        mLogoutBtn.setVisible(false);
         mNextBtn.setVisible(false);
         mDoneBtn.setVisible(false);
+        mWillBtn.setVisible(false);
+        mLogoutBtn.setVisible(false);
         return true;
     }
 
@@ -184,6 +189,9 @@ public class TimelineActivity extends XActivity {
             case R.id.action_add:
                 goToNext(MemoryAddFragment.class);
                 return true;
+            case R.id.action_wills:
+                goToNext(WillFragment.class);
+                return true;
             case R.id.action_logout:
                 logoutAccount();
                 return true;
@@ -197,6 +205,8 @@ public class TimelineActivity extends XActivity {
                         mEditDesFragment.confirm();
                     } else if (current instanceof MemoryAddFragment) {
                         mAddFragment.confirm();
+                    } else if (current instanceof WillFragment) {
+                        mWillFragment.confirm();
                     }
                 }
                 return true;
@@ -291,16 +301,18 @@ public class TimelineActivity extends XActivity {
             mToolBar.setNavigationIcon(R.drawable.logo_buryinmind_white_small);
             mToolBar.setTitle(R.string.app_name);
             mAddBtn.setVisible(true);
-            mLogoutBtn.setVisible(true);
             mNextBtn.setVisible(false);
             mDoneBtn.setVisible(false);
+            mWillBtn.setVisible(true);
+            mLogoutBtn.setVisible(true);
         } else {
             mToolBar.setNavigationIcon(R.drawable.icon_arrow_back_white);
             mToolBar.setTitle(null);
             mAddBtn.setVisible(false);
-            mLogoutBtn.setVisible(false);
             mNextBtn.setVisible(false);
             mDoneBtn.setVisible(true);
+            mWillBtn.setVisible(false);
+            mLogoutBtn.setVisible(false);
         }
     }
 
@@ -451,6 +463,43 @@ public class TimelineActivity extends XActivity {
                         .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                         .commit();
             }
+        }else if (clazz == WillFragment.class) {
+            if (mWillFragment == null) {
+                mWillFragment = new WillFragment();
+            }
+            mWillFragment.setListener(new XBaseFragmentListener() {
+                @Override
+                public void onEnter() {
+                    refreshToolBar();
+                    if (!mCollapsed) {
+                        mAppBar.setExpanded(false, true);
+                    }
+                    ViewUtil.animateExpand(mAccountLine, false);
+                }
+
+                @Override
+                public void onLoading(boolean show) {
+                    showProgress(show);
+                }
+
+                @Override
+                public void onFinish(boolean result, Object data) {
+                    showProgress(false);
+                    if (result) {
+                        if (current == null) {
+                            goToNext(TimelineFragment.class);
+                        } else {
+                            // 模拟返回按钮
+                            onBackPressed();
+                        }
+                    }
+                }
+            });
+            getFragmentManager().beginTransaction()
+                    .replace(R.id.content_layout, mWillFragment)
+                    .addToBackStack(null)
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .commit();
         } else if (current instanceof TimelineFragment &&
                 clazz == UserDescriptionFragment.class) {
             if (mEditDesFragment == null) {

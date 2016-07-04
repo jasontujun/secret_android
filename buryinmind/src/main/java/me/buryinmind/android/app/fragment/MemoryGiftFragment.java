@@ -313,12 +313,12 @@ public class MemoryGiftFragment extends XFragment {
                 @Override
                 public void onClick(View v) {
                     if (item.takeTime == -1) {
-                        Toast.makeText(getActivity(), String.format(getResources()
-                                        .getString(R.string.info_memory_receiver_reject), item.receiverName),
+                        Toast.makeText(getActivity(), getResources().getString
+                                        (R.string.info_memory_receiver_reject, item.receiverName),
                                 Toast.LENGTH_SHORT).show();
                     } else if (item.takeTime > 0) {
-                        Toast.makeText(getActivity(), String.format(getResources()
-                                        .getString(R.string.info_memory_receiver_taken), item.receiverName),
+                        Toast.makeText(getActivity(), getResources().getString
+                                        (R.string.info_memory_receiver_taken, item.receiverName),
                                 Toast.LENGTH_SHORT).show();
                     } else if (item.takeTime == 0) {
                         if (mWaiting) {
@@ -326,8 +326,8 @@ public class MemoryGiftFragment extends XFragment {
                             return;
                         }
                         // 撤销寄出的回忆，弹出提示对话框！
-                        ConfirmDialog.newInstance(String.format(getResources()
-                                        .getString(R.string.info_memory_receiver_cancel), item.receiverName),
+                        ConfirmDialog.newInstance(getResources().getString
+                                        (R.string.info_memory_receiver_cancel, item.receiverName),
                                 new DialogListener() {
                                     boolean confirm = false;
 
@@ -505,7 +505,7 @@ public class MemoryGiftFragment extends XFragment {
                         .into(holder.mHeadView);
                 holder.mNameView.setText(memory.name);
                 holder.mAuthorNameView.setText(memory.authorName);
-                holder.mDateView.setText(String.format(getResources().getString(R.string.info_memory_time),
+                holder.mDateView.setText(getResources().getString(R.string.info_memory_time,
                         XStringUtil.calendar2str(TimeUtil.getCalendar(memory.happenStartTime), ".")));
                 if (memory.outGifts == null || memory.outGifts.size() == 0) {
                     holder.mStampLayout.setVisibility(View.GONE);
